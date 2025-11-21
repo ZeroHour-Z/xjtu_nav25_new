@@ -163,8 +163,8 @@ private:
     
     // 打印完整信息
     RCLCPP_INFO(this->get_logger(),
-                "Market Command - x:%.2f y:%.2f stop:%d color:%d state:%d(%s) event:%d(%s) hp:%d bullet:%d",
-                cmd.x_current, cmd.y_current, cmd.stop, cmd.color, 
+                "Market Command - color:%d state:%d(%s) event:%d(%s) hp:%d bullet:%d",
+                cmd.color, 
                 cmd.eSentryState, state_str.c_str(), 
                 cmd.eSentryEvent, event_str.c_str(), 
                 cmd.hp_remain, cmd.bullet_remain);
@@ -182,8 +182,8 @@ private:
     // std::string ammo_param = "ammo";
     std::string state_param = "sentry_state";
     std::string event_param = "sentry_event";
-    std::string x_param = "x_current";
-    std::string y_param = "y_current";
+    // std::string x_param = "x_current";
+    // std::string y_param = "y_current";
     // std::string stop_param = "stop";
     // std::string color_param = "color";
 
@@ -193,8 +193,8 @@ private:
         // rclcpp::Parameter(ammo_param, static_cast<double>(cmd.bullet_remain)),
         rclcpp::Parameter(state_param, state_str),
         rclcpp::Parameter(event_param, event_str),
-        rclcpp::Parameter(x_param, static_cast<double>(cmd.x_current)),
-        rclcpp::Parameter(y_param, static_cast<double>(cmd.y_current)),
+        // rclcpp::Parameter(x_param, static_cast<double>(cmd.x_current)),
+        // rclcpp::Parameter(y_param, static_cast<double>(cmd.y_current)),
         // rclcpp::Parameter(stop_param, static_cast<int>(cmd.stop)),
         // rclcpp::Parameter(color_param, static_cast<int>(cmd.color)),
     };
