@@ -1,0 +1,305 @@
+---
+title: "哨兵寄录"
+publishDate: 2025-10-05
+updatedDate: 2025-11-21
+description: "调车寄录, changelog, 算法探索"
+tags:
+  - SLAM
+  - navigation
+  - fast-lio
+
+---
+# 哨兵寄录
+
+## 251121 调试
+
+收到电控消息sentry_state为150, 0x96, 但有效范围为0-9, 何意味
+
+## 251119 调试
+
+1. 启动雷达驱动,发布点云
+
+```bash
+ros2 launch livox_ros_driver2 msg_MID360_launch.py
+```
+
+2. 启动里程计和定位
+
+> 迁移到ros2之后,point_lio的延迟变得大且不稳定,原因未知,暂时不建议在线跑。
+
+```bash
+ros2 launch rm_bringup SLAM_and_localize.py backend:=point_lio rviz:=true SLAM_mapping_only.py # 仅建图
+ros2 launch rm_bringup SLAM_odom_only.py backend:=faster_lio rviz:=true # 仅里程计
+ros2 launch rm_bringup SLAM_and_localize.py backend:=faster_lio rviz:=true # 启动重定位和里程计
+```
+
+3. (实验性内容)启动地形分析,输出`/traversability/obstacles`和`/traversability/ground`
+
+```bash
+ros2 launch rm_ta bag_livox_ta.launch.py 
+```
+
+4. 启动`nav_stack`
+
+```bash
+ros2 launch nav2_client_cpp nav2_stack_with_gvc.launch.py # 还需要改进
+```
+
+或者使用仿真模式,可以用来测试决策
+
+```bash
+ros2 launch nav2_client_cpp nav2_stack_with_gvc_sim.launch.py
+```
+
+启动决策(还没测):
+
+```bash
+ros2 launch rm_bt_decision bt.launch.py  
+```
+
+5. 启动通信节点
+
+```bash
+ros2 launch rm_comm_ros2 rm_comm_bringup.launch.py
+```
+
+## ROS 服务器配置，YAML 中不写坐标
+
+ros2 param set /rm_bt_decision_node supply.heal_x -2.0
+ros2 param set /rm_bt_decision_node supply.heal_y -2.0
+ros2 param set /rm_bt_decision_node supply.reload_x -2.0
+ros2 param set /rm_bt_decision_node supply.reload_y -2.0
+
+## 状态传递到决策树：rm_comm_ros2/src/handler_node.cpp
+
+> 99 行handleNavCommand，去掉注释
+
+**状态转换和参数发布：**
+
+紧着到 104 行
+
+## 关于 rm_comm_bringup.launch.cpp
+
+> 第11行传入参数应为实数，传入 int 会出错
+
+## 关于 global_velocity_controller_node.cpp
+
+> 注释掉硬编码的测试代码，使用PID控制器计算的速度
+
+```cpp
+// 290行左右
+vx_map_cmd = 1.0;
+vy_map_cmd = 0.0;
+predicted_yaw = current_yaw + 0.1 + 0.0 * std::hypot(vx_map_cmd, vy_map_cmd);
+```
+
+## 通信协议 protocol.h
+
+```cpp
+#pragma pack(1)
+typedef struct {           // 都使用朴素机器人坐标系,前x,左y,上z
+  uint8_t  frame_header;   // 帧头 0x72
+  uint8_t  color;          // 机器人颜色（0=RED, 1=BLUE）
+  uint8_t  sentry_command; // 命令
+  uint8_t  eSentryState;   // 当前状态
+  uint8_t  eSentryEvent;   // 事件
+  uint16_t hp_remain;      // 剩余生命值
+  uint16_t bullet_remain;  // 剩余子弹量
+  float    time_remain;    // 剩余时间，单位秒
+  float    time_test;
+  uint32_t reserve_2 : 16;
+  uint32_t reserve_3 : 32;
+  uint32_t reserve_4 : 32;
+  uint32_t reserve_5 : 32;
+  uint32_t reserve_6 : 32;
+  uint32_t reserve_7 : 32;
+  uint32_t reserve_8 : 32;
+  uint32_t reserve_9 : 32;
+  uint32_t reserve_10 : 32;
+  uint32_t reserve_11 : 32;
+  uint32_t reserve_12 : 32;
+  uint32_t reserve_13 : 32;
+  uint8_t  frame_tail; // 帧尾 0x21
+} navCommand_t;
+#pragma pack()
+
+#pragma pack(1)
+typedef struct {         // 都使用朴素机器人坐标系,前x,左y,上z
+  uint8_t  frame_header; // 帧头 0x72
+  float    x_speed;      // x 方向速度
+  float    y_speed;      // y 方向速度
+  float    x_current;    // 当前 x 坐标
+  float    y_current;    // 当前 y 坐标
+  float    x_target;     // 当前 x 坐标
+  float    y_target;     // 当前 y 坐标
+  float    yaw_current;  // 当前云台偏航角
+  float    yaw_desired;  // 期望云台偏航角
+  uint8_t  sentry_region;
+  float    time_test;
+  uint32_t reserve_2 : 8;
+  uint32_t reserve_3 : 32;
+  uint32_t reserve_4 : 32;
+  uint32_t reserve_5 : 32;
+  uint32_t reserve_6 : 32;
+  uint32_t reserve_7 : 32;
+  uint32_t reserve_8 : 32; // 填充到64字节，保持帧尾为最后一字节
+  uint8_t  frame_tail;     // 帧尾 0x4D
+} navInfo_t;
+
+// 商场赛使用1239
+enum sentry_state_e {
+  standby = 0,         // 待命状态
+  attack,              // 进攻状态，该状态需视野中出现敌人
+  patrol,              // 巡逻状态，固定几个点的巡逻状态
+  stationary_defense,  // 原地不动防守状态
+  constrained_defense, // 约束防守状态，适用于第一次死亡前，前哨站被击毁后
+  error,               // 错误状态，即进入了不该进入的状态转移表
+  logic,               // 逻辑状态，在这里面做逻辑处理和强制状态转换
+  pursuit,             // 追击状态，此时追击坐标为敌人消失的坐标
+  supply, // 补给状态，弹丸打完或血量低下会进入此状态，attack、patrol、free_defense的补给状态
+  go_attack_outpost, // 只推前哨站状态
+};
+
+```
+
+## 项目 Launch 文件：
+
+1. 传感器驱动模块（rm_driver）
+
+```bash
+# Livox激光雷达驱动 (ROS1版本)
+ros2 launch livox_ros_driver2 msg_MID360_launch.py
+ros2 launch livox_ros_driver2 msg_HAP_launch.py
+ros2 launch livox_ros_driver2 msg_mixed_launch.py
+
+# 点云仿真 (我们添加的)
+ros2 launch pointcloud_simulator pointcloud_sim.launch.py
+```
+
+2. 定位模块（rm_localization）
+
+```bash
+# 统一定位启动 (推荐)
+ros2 launch rm_localization_bringup localization_bringup.launch.py backend:=fast_lio
+ros2 launch rm_localization_bringup localization_bringup.launch.py backend:=faster_lio
+ros2 launch rm_localization_bringup localization_bringup.launch.py backend:=point_lio
+
+# 单独启动各算法
+ros2 launch fast_lio mapping.launch.py
+ros2 launch faster_lio_ros2 mapping.launch.py
+ros2 launch fast_lio_localization_ros2 localize.launch.py
+```
+
+3. 感知模块（rm_perception）
+
+```bash
+# 地面分割
+ros2 launch linefit_ground_segmentation_ros segmentation.launch.py
+ros2 launch linefit_ground_segmentation_ros test.launch.py
+
+# 地形分析
+ros2 launch rm_ta traversability_costmap.launch.py
+ros2 launch rm_ta bag_livox_ta.launch.py
+
+# IMU滤波
+ros2 launch imu_complementary_filter complementary_filter.launch.py
+```
+
+4. 导航模块（rm_nav）
+
+```bash
+# 完整Nav2栈 (推荐)
+ros2 launch nav2_client_cpp nav2_stack_with_gvc_sim.launch.py
+ros2 launch nav2_client_cpp nav2_stack_with_gvc.launch.py
+
+# 全局速度控制器
+ros2 launch global_velocity_controller global_velocity_controller.launch.py
+ros2 launch global_velocity_controller global_velocity_controller_no_sim.launch.py
+```
+
+5. 行为树模块（rm_bt_decision）
+
+```bash
+# 行为树决策
+ros2 launch rm_bt_decision bt.launch.py
+```
+
+6. 通信模块（rm_comm_ros2）
+
+```bash
+# 通信框架
+ros2 launch rm_comm_ros2 rm_comm_bringup.launch.py
+```
+
+## 启动
+
+### 完整系统启动
+
+```bash
+# 1. 启动雷达
+ros2 launch livox_ros_driver2 msg_MID360_launch.py
+
+# 2. 启动定位
+ros2 launch rm_localization_bringup SLAM_and_localization.launch.py backend:=point_lio rviz:=true
+ros2 launch rm_localization_bringup SLAM_and_odom.launch.py backend:=point_lio rviz:=false
+
+# 3. 启动导航
+ros2 launch nav2_client_cpp nav2_stack_with_gvc.launch.py
+
+# 4. 启动决策
+ros2 launch rm_bt_decision bt.launch.py
+```
+
+### 测试和开发
+
+```bash
+# 单独测试定位
+ros2 launch fast_lio mapping.launch.py
+
+# 仿真测试导航，测决策
+ros2 launch nav2_client_cpp nav2_stack_with_gvc_sim.launch.py
+```
+
+## Launch文件参数说明
+
+定位模块参数
+
+```bash
+# 选择算法后端
+backend:=fast_lio | faster_lio | point_lio
+
+# 启用RViz
+rviz:=true | false
+
+# 使用仿真时间
+use_sim_time:=true | false
+
+# 参数文件
+fast_lio_params:=/path/to/config.yaml
+```
+
+导航模块参数
+
+```bash
+# 地图文件
+map_yaml:=/path/to/map.yaml
+
+# Nav2参数
+params_file:=/path/to/nav2_params.yaml
+
+# 行为树文件
+default_bt_xml:=/path/to/bt.xml
+```
+
+决策模块参数
+
+```bash
+# 行为树文件
+tree:=/path/to/bt.xml
+
+# 行为树频率
+tick_hz:=10.0
+
+# 是否启用web可视化
+use_web_viewer:=true | false
+```

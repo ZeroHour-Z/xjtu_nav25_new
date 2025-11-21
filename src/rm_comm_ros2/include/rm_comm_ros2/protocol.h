@@ -4,80 +4,80 @@
 #include <string>
 
 #pragma pack(1)
-typedef struct {           // 都使用朴素机器人坐标系,前x,左y,上z
-  uint8_t  frame_header;   // 帧头 0x72
-  uint8_t  color;          // 机器人颜色（0=RED, 1=BLUE）
-  uint8_t  sentry_command; // 命令
-  uint8_t  eSentryState;   // 当前状态
-  uint8_t  eSentryEvent;   // 事件
-  uint16_t hp_remain;      // 剩余生命值
-  uint16_t bullet_remain;  // 剩余子弹量
-  float    time_remain;    // 剩余时间，单位秒
-  float    time_test;
-  uint32_t reserve_2 : 16;
-  uint32_t reserve_3 : 32;
-  uint32_t reserve_4 : 32;
-  uint32_t reserve_5 : 32;
-  uint32_t reserve_6 : 32;
-  uint32_t reserve_7 : 32;
-  uint32_t reserve_8 : 32;
-  uint32_t reserve_9 : 32;
-  uint32_t reserve_10 : 32;
-  uint32_t reserve_11 : 32;
-  uint32_t reserve_12 : 32;
-  uint32_t reserve_13 : 32;
-  uint8_t  frame_tail; // 帧尾 0x21
+typedef struct {            // 都使用朴素机器人坐标系,前x,左y,上z
+  uint8_t  frame_header;    // 8位 帧头 0x72
+  uint8_t  color;           // 8位 机器人颜色（0=RED, 1=BLUE）
+  uint8_t  sentry_command;  // 8位 命令
+  uint8_t  eSentryState;    // 8位 当前状态
+  uint8_t  eSentryEvent;    // 8位 事件
+  uint16_t hp_remain;       // 16位 剩余生命值
+  uint16_t bullet_remain;   // 16位 剩余子弹量
+  float    time_remain;     // 32位 剩余时间，单位秒
+  float    time_test;       // 32位 测试时间，单位秒
+  uint32_t reserve_2 : 16;  // 16位 保留
+  uint32_t reserve_3 : 32;  // 32位 保留
+  uint32_t reserve_4 : 32;  // 32位 保留
+  uint32_t reserve_5 : 32;  // 32位 保留
+  uint32_t reserve_6 : 32;  // 32位 保留
+  uint32_t reserve_7 : 32;  // 32位 保留
+  uint32_t reserve_8 : 32;  // 32位 保留
+  uint32_t reserve_9 : 32;  // 32位 保留
+  uint32_t reserve_10 : 32; // 32位 保留  
+  uint32_t reserve_11 : 32; // 32位 保留
+  uint32_t reserve_12 : 32; // 32位 保留
+  uint32_t reserve_13 : 32; // 32位 保留
+  uint8_t  frame_tail;      // 帧尾 0x21
 } navCommand_t;
 #pragma pack()
 
 #pragma pack(1)
-typedef struct {           // 都使用朴素机器人坐标系,前x,左y,上z
-  uint8_t  frame_header;   // 帧头 0x72
-  float    x_current;    // 当前 x 坐标
-  float    y_current;    // 当前 y 坐标
-  uint8_t  stop;        // 当前状态
-  uint8_t  color;
-  uint8_t  eSentryState;   // 当前状态
-  uint8_t  eSentryEvent;   // 事件
-  uint16_t hp_remain;      // 剩余生命值
-  uint16_t bullet_remain;  // 剩余子弹量
-  uint32_t reserve_2 : 16;
-  uint32_t reserve_3 : 32;
-  uint32_t reserve_4 : 32;
-  uint32_t reserve_5 : 32;
-  uint32_t reserve_6 : 32;
-  uint32_t reserve_7 : 32;
-  uint32_t reserve_8 : 32;
-  uint32_t reserve_9 : 32;
-  uint32_t reserve_10 : 32;
-  uint32_t reserve_11 : 32;
-  uint32_t reserve_12 : 32;
-  uint32_t reserve_13 : 32;
-  uint8_t  frame_tail; // 帧尾 0x21
+typedef struct {            // 都使用朴素机器人坐标系,前x,左y,上z
+  uint8_t  frame_header;    // 8位 帧头 0x72
+  uint8_t  eSentryState;    // 8位 当前状态
+  uint8_t  sentry_command;  // 8位 命令
+  uint8_t  color;           // 8位 机器人颜色（0=RED, 1=BLUE）
+  uint8_t  eSentryEvent;    // 8位 事件
+  uint16_t hp_remain;       // 16位 剩余生命值
+  uint16_t bullet_remain;   // 16位 剩余子弹量
+  float    time_remain;     // 32位 剩余时间，单位秒
+  float    time_test;       // 32位 测试时间，单位秒
+  uint32_t reserve_2 : 16;  // 16位 保留
+  uint32_t reserve_3 : 32;  // 32位 保留
+  uint32_t reserve_4 : 32;  // 32位 保留
+  uint32_t reserve_5 : 32;  // 32位 保留
+  uint32_t reserve_6 : 32;  // 32位 保留
+  uint32_t reserve_7 : 32;  // 32位 保留
+  uint32_t reserve_8 : 32;  // 32位 保留
+  uint32_t reserve_9 : 32;  // 32位 保留
+  uint32_t reserve_10 : 32; // 32位 保留
+  uint32_t reserve_11 : 32; // 32位 保留
+  uint32_t reserve_12 : 32; // 32位 保留
+  uint32_t reserve_13 : 32; // 32位 保留
+  uint8_t  frame_tail;      // 帧尾 0x21
 } marketCommand_t;
 #pragma pack()
 
 #pragma pack(1)
-typedef struct {         // 都使用朴素机器人坐标系,前x,左y,上z
-  uint8_t  frame_header; // 帧头 0x72
-  float    x_speed;      // x 方向速度
-  float    y_speed;      // y 方向速度
-  float    x_current;    // 当前 x 坐标
-  float    y_current;    // 当前 y 坐标
-  float    x_target;     // 当前 x 坐标
-  float    y_target;     // 当前 y 坐标
-  float    yaw_current;  // 当前云台偏航角
-  float    yaw_desired;  // 期望云台偏航角
-  uint8_t  sentry_region;
-  float    time_test;
-  uint32_t reserve_2 : 8;
-  uint32_t reserve_3 : 32;
-  uint32_t reserve_4 : 32;
-  uint32_t reserve_5 : 32;
-  uint32_t reserve_6 : 32;
-  uint32_t reserve_7 : 32;
-  uint32_t reserve_8 : 32; // 填充到64字节，保持帧尾为最后一字节
-  uint8_t  frame_tail;     // 帧尾 0x4D
+typedef struct {           // 都使用朴素机器人坐标系,前x,左y,上z
+  uint8_t  frame_header;   // 8位帧头 0x72
+  float    x_speed;        // x 方向速度
+  float    y_speed;        // y 方向速度
+  float    x_current;      // 当前 x 坐标
+  float    y_current;      // 当前 y 坐标
+  float    x_target;       // 当前 x 坐标
+  float    y_target;       // 当前 y 坐标
+  float    yaw_current;    // 当前云台偏航角
+  float    yaw_desired;    // 期望云台偏航角
+  uint8_t  sentry_region;  // 8位哨兵区域
+  float    time_test;      // 32位测试时间，单位秒
+  uint32_t reserve_2 : 8;  // 8位保留
+  uint32_t reserve_3 : 32; // 32位保留
+  uint32_t reserve_4 : 32; // 32位保留
+  uint32_t reserve_5 : 32; // 32位保留
+  uint32_t reserve_6 : 32; // 32位保留
+  uint32_t reserve_7 : 32; // 32位保留
+  uint32_t reserve_8 : 32; // 32位保留
+  uint8_t  frame_tail;     // 帧尾 0x4D,填充到 64字节，保持帧尾为最后一字节
 } navInfo_t;
 #pragma pack()
 

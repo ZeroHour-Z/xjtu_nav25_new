@@ -79,6 +79,13 @@ private:
                 sizeof(marketCommand_t) // 复制长度：结构体的大小
     );
 
+    // 调试：打印关键字节位置的数据
+    if (msg->data.size() >= 15) {
+      RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                           "Raw bytes [9-14]: state=0x%02X command=0x%02X color=0x%02X event=0x%02X hp_low=0x%02X hp_high=0x%02X",
+                           msg->data[1], msg->data[2], msg->data[3], msg->data[4], msg->data[5], msg->data[6]);
+    }
+
     // 3. 协议验证：在转换成结构体后，检查帧尾等成员变量是否符合协议
     if (received_cmd.frame_tail != kTailExpected) {
       // RCLCPP_WARN(this->get_logger(), "Invalid frame tail: expected 0x21, got 0x%02X",
