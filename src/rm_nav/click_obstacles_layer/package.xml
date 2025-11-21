@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>click_obstacles_layer</name>
+  <version>0.1.0</version>
+  <description>Nav2 costmap layer that marks obstacles from RViz clicked points</description>
+  <maintainer email="dev@example.com">dev</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>nav2_costmap_2d</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>pluginlib</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <pluginlib plugin="plugin_description.xml"/>
+  </export>
+</package> 

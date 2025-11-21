@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+
+    <!-- 显式指定将要使用的插件 ID，避免拿到不期望的缺省值 -->
+    <Sequence name="InitAndNavigate">
+      <SetBlackboard output_key="planner_id" value="GridBased"/>
+      <SetBlackboard output_key="controller_id" value="FollowPath"/>
+      <SetBlackboard output_key="goal_checker_id" value="general_goal_checker"/>
+
+      <!-- 只有当 FollowPath 成功（真的到达）时，整棵树才成功 -->
+      <RecoveryNode name="NavigateWithRecovery" number_of_retries="3">
+
+        <!-- ===== 主任务：边走边全局重规划 ===== -->
+        <PipelineSequence name="PlanAndFollow">
+          <RateController hz="2.0">
+            <DistanceController distance="0.5">
+              <ComputePathToPose goal="{goal}" path="{path}" planner_id="{planner_id}"/>
+            </DistanceController>
+          </RateController>
+
+          <FollowPath path="{path}" controller_id="{controller_id}" goal_checker_id="{goal_checker_id}"/>
+        </PipelineSequence>
+
+        <!-- ===== 恢复：清两张代价地图 + 等待，再重试 ===== -->
+        <Sequence name="ClearAndWait">
+          <!-- <ClearEntireCostmap service_name="local_costmap/clear_entirely_local_costmap"/>
+          <ClearEntireCostmap service_name="global_costmap/clear_entirely_global_costmap"/> -->
+          <Wait wait_duration="1.5"/>
+        </Sequence>
+      </RecoveryNode>
+    </Sequence>
+  </BehaviorTree>
+</root>

@@ -1,0 +1,27 @@
+devel/
+build/
+install/
+log/
+olds/
+rosbags/
+tests/
+
+.vscode/
+.cursor/
+.cache/
+__pycache__/
+.docs/
+.catkin_workspace
+*.gv
+*.pdf
+*.pcd
+
+mat_pre.txt
+mat_out.txt
+imu.txt
+dbg.txt
+pos_log.txt
+github_token
+
+# Windows Zone Identifier files
+*:Zone.Identifier

@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+
+    <Sequence name="InitAndNavigate">
+      <SetBlackboard output_key="planner_id" value="GridBased"/>
+      <SetBlackboard output_key="controller_id" value="FollowPath"/>
+      <SetBlackboard output_key="goal_checker_id" value="general_goal_checker"/>
+
+      <!-- 外层兜底：主任务 FAIL 时清图+等待再试 -->
+      <RecoveryNode name="NavigateWithRecovery" number_of_retries="5">
+
+        <!-- 主任务：不卡就导航；一旦卡住立即清图 -->
+        <ReactiveFallback name="NavigateOrClear">
+          <!-- 分支A：未卡住则运行导航 -->
+          <Sequence name="NotStuckThenNavigate">
+            <Inverter>
+              <IsStuck/>
+            </Inverter>
+            <PipelineSequence name="PlanAndFollow">
+              <RateController hz="2.0">
+                <DistanceController distance="0.4">
+                  <ComputePathToPose goal="{goal}" path="{path}" planner_id="{planner_id}"/>
+                </DistanceController>
+              </RateController>
+              <FollowPath path="{path}" controller_id="{controller_id}" goal_checker_id="{goal_checker_id}"/>
+            </PipelineSequence>
+          </Sequence>
+
+          <!-- 分支B：卡住则清图并等待；返回 SUCCESS，让下一tick回到分支A继续跑 -->
+          <Sequence name="ClearWhenStuck">
+            <ClearEntireCostmap service_name="local_costmap/clear_entirely_local_costmap"/>
+            <ClearEntireCostmap service_name="global_costmap/clear_entirely_global_costmap"/>
+            <Wait wait_duration="1.0"/>
+          </Sequence>
+        </ReactiveFallback>
+
+        <!-- 兜底恢复：主任务整体 FAIL 时也清一次图 -->
+        <Sequence name="ClearAndRetry">
+          <ClearEntireCostmap service_name="local_costmap/clear_entirely_local_costmap"/>
+          <ClearEntireCostmap service_name="global_costmap/clear_entirely_global_costmap"/>
+          <Wait wait_duration="1.5"/>
+        </Sequence>
+      </RecoveryNode>
+    </Sequence>
+  </BehaviorTree>
+</root>

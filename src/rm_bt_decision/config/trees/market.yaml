@@ -1,0 +1,62 @@
+tree:
+  name: market_tree
+  root:
+    type: Selector
+    name: 商场赛决策树
+    params:
+      memory: false
+    children:
+      # ========== 1. 补给状态（最高优先级）==========
+      - type: Sequence
+        name: 补给状态处理
+        params:
+          memory: true
+        children:
+          - type: ParamStringCondition
+            name: 检查是否为supply状态
+            params:
+              param: "sentry_state"
+              expected: "supply"
+              latched_ok: false
+          - type: NavigateToPoseAction
+            name: 回到起始位置
+            params:
+              server_name: "navigate_to_pose"
+              frame_id: "map"
+              x_param: "start_x"  # 从参数读取起始x坐标
+              y_param: "start_y"  # 从参数读取起始y坐标
+              yaw_param: "start_yaw"  # 从参数读取起始yaw
+              timeout_s: 120.0
+
+      # ========== 2. 巡逻状态 ==========
+      - type: Sequence
+        name: 巡逻状态处理
+        params:
+          memory: true
+        children:
+          - type: ParamStringCondition
+            name: 检查是否为patrol状态
+            params:
+              param: "sentry_state"
+              expected: "patrol"
+              latched_ok: false
+          - type: NavigateToRelativePoseAction
+            name: 向前走1米
+            params:
+              server_name: "navigate_to_pose"
+              relative_x: 1.0   # 向前走1米
+              relative_y: 0.0
+              relative_yaw: 0.0
+              timeout_s: 120.0
+
+      # ========== 3. 其他状态（待命、进攻等）==========
+      - type: Sequence
+        name: 其他状态处理
+        params:
+          memory: true
+        children:
+          - type: Wait
+            name: 等待状态变化
+            params:
+              duration_s: 0.5
+

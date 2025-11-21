@@ -1,0 +1,24 @@
+global_velocity_controller:
+  ros__parameters:
+    # Path tracking
+    lookahead_distance: 0.5
+    target_speed: 2.0
+    heading_kp: 1.0
+    external_override_timeout: 0.2
+    # Heading prediction factor (0.0~1.0)
+    prediction_time_factor: 0.0
+
+    enable_dynamic_lookahead: true
+    min_lookahead_distance: 0.3
+    max_lookahead_distance: 0.7
+
+    curvature_window_distance: 1.0
+    curvature_low: 0.1
+    curvature_high: 1.0
+
+    # Goal handling / slow-down near goal
+    slow_down_distance: 0.5
+    min_target_speed: 0.03
+    goal_position_tolerance: 0.05
+    goal_yaw_tolerance: 6.28
+    final_heading_switch_distance: 0.3 

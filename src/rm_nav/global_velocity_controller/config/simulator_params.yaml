@@ -1,0 +1,16 @@
+global_velocity_controller:
+  ros__parameters:
+    # Simulation
+    simulate: true
+    sim_init_x: 0.0
+    sim_init_y: 0.0
+    sim_init_yaw: 0.0
+
+    # Measurement noise (applied to body-frame velocity feedback)
+    sim_linear_noise_std: 0.0   # m/s (1-sigma)
+    sim_angular_noise_std: 0.0  # rad/s (1-sigma)
+    sim_noise_seed: -1
+
+    # Process noise (applied to the simulated state integration)
+    sim_process_linear_noise_std: 0.0    # m/s (1-sigma)
+    sim_process_angular_noise_std: 0.0   # rad/s (1-sigma) 

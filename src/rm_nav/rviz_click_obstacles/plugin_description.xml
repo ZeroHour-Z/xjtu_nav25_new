@@ -1,0 +1,5 @@
+<library path="rviz_click_obstacles">
+  <class name="rviz_click_obstacles/ClickObstaclesPanel" type="rviz_click_obstacles::ClickObstaclesPanel" base_class_type="rviz_common::Panel">
+    <description>Panel to add/clear obstacles via RViz clicks and control radius</description>
+  </class>
+</library> 

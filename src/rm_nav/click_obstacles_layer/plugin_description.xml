@@ -1,0 +1,5 @@
+<library path="click_obstacles_layer">
+  <class name="click_obstacles_layer::ClickObstaclesLayer" type="click_obstacles_layer::ClickObstaclesLayer" base_class_type="nav2_costmap_2d::Layer">
+    <description>Marks lethal obstacles from RViz clicked points with configurable radius</description>
+  </class>
+</library> 

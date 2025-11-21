@@ -1,0 +1,18 @@
+[submodule "src/rm_localization/faster_lio_ros2"]
+	path = src/rm_localization/faster_lio_ros2
+	url = https://github.com/Ovalene2333/faster_lio_ros2
+[submodule "src/rm_localization/fast_lio_localization_ros2"]
+	path = src/rm_localization/fast_lio_localization_ros2
+	url = https://github.com/Ovalene2333/fast_lio_localization_ros2.git
+[submodule "src/rm_localization/point_lio_ros2"]
+	path = src/rm_localization/point_lio_ros2
+	url = https://github.com/Ovalene2333/point_lio_ros2.git
+[submodule "src/rm_driver/livox_to_pointcloud2"]
+	path = src/rm_driver/livox_to_pointcloud2
+	url = https://github.com/koide3/livox_to_pointcloud2
+[submodule "src/rm_localization/point_lio"]
+	path = src/rm_localization/point_lio
+	url = https://github.com/LihanChen2004/Point-LIO
+[submodule "documents"]
+	path = documents
+	url = https://github.com/Ovalene2333/slam_learning_journey
