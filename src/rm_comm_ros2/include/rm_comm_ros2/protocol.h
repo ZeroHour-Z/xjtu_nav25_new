@@ -137,6 +137,7 @@ static const std::map<uint8_t, std::string> state_map = {
     {sentry_state_e::error, "error"},
     {sentry_state_e::logic, "logic"},
     {sentry_state_e::pursuit, "pursuit"},
+    {sentry_state_e::supply, "supply"},
     {sentry_state_e::go_attack_outpost, "go_attack_outpost"}};
 
 static const std::map<uint8_t, std::string> event_map = {

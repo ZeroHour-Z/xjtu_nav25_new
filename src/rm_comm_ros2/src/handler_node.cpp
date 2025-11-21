@@ -17,24 +17,18 @@ class HandlerNode : public rclcpp::Node {
 public:
   HandlerNode() : Node("handler_node") {
     patrol_group_pub_ = this->create_publisher<std_msgs::msg::String>("/patrol_group", 10);
-
     tx_pub_ = this->create_publisher<std_msgs::msg::UInt8MultiArray>("/rm_comm/tx_packet", 10);
-
-    rx_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
-        "/rm_comm/rx_packet", 100,
-        std::bind(&HandlerNode::onRxPacket, this, std::placeholders::_1));
-
-    cmd_vel_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
-        "/cmd_vel", 10, std::bind(&HandlerNode::onCmdVel, this, std::placeholders::_1));
-
-    odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-        "/Odometry", 10, std::bind(&HandlerNode::onOdom, this, std::placeholders::_1));
+    rx_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>("/rm_comm/rx_packet", 100, 
+      std::bind(&HandlerNode::onRxPacket, this, std::placeholders::_1));
+    cmd_vel_sub_ = this->create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, 
+      std::bind(&HandlerNode::onCmdVel, this, std::placeholders::_1));
+    odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/Odometry", 10, 
+      std::bind(&HandlerNode::onOdom, this, std::placeholders::_1));
 
     // 只声明一次参数，避免重复声明异常
     this->declare_parameter<double>("tx_hz", 100.0);
     this->declare_parameter<double>("target_x", 0.0);
     this->declare_parameter<double>("target_y", 0.0);
-
     double hz = 100.0;
     this->get_parameter("tx_hz", hz);
     tx_timer_ = this->create_wall_timer(
@@ -101,7 +95,7 @@ private:
 
   void handleNavCommand(const navCommand_t& cmd) {
     // std::cout << "hp_remain:" << cmd.hp_remain << std::endl;
-    printf("bullet_remain:%d\n", cmd.bullet_remain);
+    // printf("bullet_remain:%d\n", cmd.bullet_remain);
     // Best-effort mirror of hp/ammo to BT node params
     // 连接到行为树节点
     static const std::string kBtNodeName = "/rm_bt_decision_node";
@@ -119,34 +113,9 @@ private:
 
     // 将状态枚举值转换为字符串
     std::string state_str = "unknown";
-    switch (cmd.eSentryState) {
-      case sentry_state_e::standby:
-        state_str = "standby";
-        break;
-      case sentry_state_e::attack:
-        state_str = "attack";
-        break;
-      case sentry_state_e::patrol:
-        state_str = "patrol";
-        break;
-      case sentry_state_e::supply:
-        state_str = "supply";
-        break;
-      case sentry_state_e::stationary_defense:
-        state_str = "stationary_defense";
-        break;
-      case sentry_state_e::constrained_defense:
-        state_str = "constrained_defense";
-        break;
-      case sentry_state_e::pursuit:
-        state_str = "pursuit";
-        break;
-      case sentry_state_e::go_attack_outpost:
-        state_str = "go_attack_outpost";
-        break;
-      default:
-        state_str = "unknown";
-        break;
+    auto state_it = state_map.find(cmd.eSentryState);
+    if (state_it != state_map.end()) {
+      state_str = state_it->second;
     }
 
     // Write values 发布到行为树
@@ -166,9 +135,6 @@ private:
   }
 
   void handleMarketCommand(const marketCommand_t& cmd) {
-    // 处理从电控发来的 marketCommand_t 结构体
-    // 提取状态信息并发送到行为树节点
-    
     // 将状态枚举值转换为字符串
     std::string state_str = "unknown";
     auto state_it = state_map.find(cmd.eSentryState);
