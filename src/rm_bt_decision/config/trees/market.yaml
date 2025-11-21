@@ -12,12 +12,8 @@ tree:
         params:
           memory: true
         children:
-          - type: ParamStringCondition
+          - type: Success
             name: 检查是否为supply状态
-            params:
-              param: "sentry_state"
-              expected: "supply"
-              latched_ok: false
           - type: NavigateToPoseAction
             name: 回到起始位置
             params:
@@ -34,12 +30,8 @@ tree:
         params:
           memory: true
         children:
-          - type: ParamStringCondition
+          - type: Success
             name: 检查是否为patrol状态
-            params:
-              param: "sentry_state"
-              expected: "patrol"
-              latched_ok: false
           - type: NavigateToRelativePoseAction
             name: 向前走1米
             params:
