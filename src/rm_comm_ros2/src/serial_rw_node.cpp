@@ -19,10 +19,16 @@
 
 using namespace std::chrono_literals;
 
-// 本节点直接操作串口设备：
+// 本节点直接操作串口设备，支持同时处理自瞄和导航两个系统的数据：
 // - 参数：port=/dev/ttyACM0, baud=115200
-// - 订阅: /rm_comm/tx_packet (handler 打包好的 64 字节，std_msgs/String)
-// - 发布: /rm_comm/rx_packet (从串口读取的原始数据，std_msgs/String)
+// - 参数：enable_aim=false (设为 true 可同时处理自瞄系统数据)
+// - 导航系统：
+//   * 订阅: /rm_comm/tx_packet (导航节点打包好的 64 字节，帧头 0x72，帧尾 0x21/0x4D)
+//   * 发布: /rm_comm/rx_packet (从串口读取的导航数据)
+// - 自瞄系统（当 enable_aim=true 时）：
+//   * 订阅: /autoaim/tx (视觉节点打包好的 64 字节，帧头 0x71，帧尾 0x4C)
+//   * 发布: /autoaim/rx (从串口读取的自瞄数据)
+// - 接收数据时会根据帧头/帧尾自动识别数据来源并发布到对应的topic
 
 namespace {
 
@@ -64,12 +70,29 @@ public:
       idle_sleep_duration_ = std::chrono::milliseconds(1);
     }
 
-    tx_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
-        "/rm_comm/tx_packet", rclcpp::QoS(10).reliable(),
-        std::bind(&SerialRwNode::onTxPacket, this, std::placeholders::_1));
+    // 支持同时处理自瞄和导航两个系统的数据
+    enable_aim_ = this->declare_parameter<bool>("enable_aim", false);
 
-    rx_pub_ = this->create_publisher<std_msgs::msg::UInt8MultiArray>(
+    // 订阅导航系统的发送topic
+    tx_nav_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
+        "/rm_comm/tx_packet", rclcpp::QoS(10).reliable(),
+        std::bind(&SerialRwNode::onTxNavPacket, this, std::placeholders::_1));
+
+    // 发布到导航系统的接收topic
+    rx_nav_pub_ = this->create_publisher<std_msgs::msg::UInt8MultiArray>(
         "/rm_comm/rx_packet", rclcpp::QoS(10).reliable());
+    
+    // 如果启用自瞄系统，也订阅和发布自瞄系统的topic
+    if (enable_aim_) {
+      tx_aim_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
+        "/autoaim/tx", 10,
+        std::bind(&SerialRwNode::onTxAimPacket, this, std::placeholders::_1));
+      
+      rx_aim_pub_ = this->create_publisher<std_msgs::msg::UInt8MultiArray>("/autoaim/rx", 10);
+      
+      RCLCPP_INFO(this->get_logger(), "Aim system enabled, will handle both aim and nav data");
+    }
+    
     running_.store(true);
 
     read_thread_ = std::thread(&SerialRwNode::readLoop, this);
@@ -87,7 +110,7 @@ public:
   }
 
 private:
-  void onTxPacket(const std_msgs::msg::UInt8MultiArray::SharedPtr msg) {
+  void onTxNavPacket(const std_msgs::msg::UInt8MultiArray::SharedPtr msg) {
     // 严格校验：仅允许 navInfo_t 长度
     constexpr size_t kTxPacketSize = sizeof(navInfo_t);
     if (msg->data.size() != kTxPacketSize) {
@@ -95,7 +118,21 @@ private:
                            "tx_packet size %zu != %zu, drop", msg->data.size(), kTxPacketSize);
       return;
     }
-
+    writeToSerial(msg);
+  }
+  
+  void onTxAimPacket(const std_msgs::msg::UInt8MultiArray::SharedPtr msg) {
+    // 严格校验：仅允许 64 字节
+    constexpr size_t kPacketSize = 64;
+    if (msg->data.size() != kPacketSize) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                           "tx_aim_packet size %zu != %zu, drop", msg->data.size(), kPacketSize);
+      return;
+    }
+    writeToSerial(msg);
+  }
+  
+  void writeToSerial(const std_msgs::msg::UInt8MultiArray::SharedPtr msg) {
     const int fd_snapshot = currentFd();
     if (fd_snapshot < 0) {
       // 触发重连由读线程负责，此处提示
@@ -136,49 +173,7 @@ private:
       RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "read n: %ld", n);
 
       if (n > 0) {
-        rx_buffer_.insert(rx_buffer_.end(), buf, buf + n);
-
-        // 常量：仅接受 0x72 开头、0x21 结尾的 marketCommand_t 帧
-        constexpr uint8_t kHeader      = 0x72;
-        constexpr uint8_t kTailCommand = 0x21;
-        constexpr size_t  kPktSize     = sizeof(marketCommand_t); // 64
-
-        // 分帧与重同步
-        while (true) {
-          // 找到下一次帧头
-          auto it = std::find(rx_buffer_.begin(), rx_buffer_.end(), kHeader);
-          if (it == rx_buffer_.end()) {
-            // 没有帧头，清空缓冲
-            rx_buffer_.clear();
-            break;
-          }
-          // 丢弃帧头之前的垃圾数据
-          if (it != rx_buffer_.begin()) {
-            rx_buffer_.erase(rx_buffer_.begin(), it);
-          }
-          // 等待完整帧
-          if (rx_buffer_.size() < kPktSize) break;
-
-          // 检查帧尾
-          if (rx_buffer_[kPktSize - 1] != kTailCommand) {
-            // 非法帧，丢弃当前帧头，继续向后搜索
-            rx_buffer_.erase(rx_buffer_.begin());
-            continue;
-          }
-
-          // 提取并发布
-          marketCommand_t n_data;
-          std::memcpy(&n_data, rx_buffer_.data(), kPktSize);
-
-          std_msgs::msg::UInt8MultiArray out_msg;
-          const uint8_t*                 byte_ptr  = reinterpret_cast<const uint8_t*>(&n_data);
-          out_msg.data.assign(byte_ptr, byte_ptr + kPktSize);
-          rx_pub_->publish(out_msg);
-
-          // 移除已消费帧
-          rx_buffer_.erase(rx_buffer_.begin(), rx_buffer_.begin() + kPktSize);
-        }
-
+        handleIncomingBytes(buf, static_cast<size_t>(n));
         continue;
       }
 
@@ -271,14 +266,88 @@ private:
     }
   }
 
+  void handleIncomingBytes(const uint8_t *data, size_t n) {
+    // 缓存数据
+    rx_buffer_.insert(rx_buffer_.end(), data, data + n);
+    constexpr size_t kPacketSize = 64;
+    
+    // 协议定义：
+    // 自瞄系统：帧头 0x71，帧尾 0x4C
+    // 导航系统：帧头 0x72，帧尾 0x21 (marketCommand_t) 或 0x4D (navInfo_t)
+    
+    while (rx_buffer_.size() >= kPacketSize) {
+      // 尝试识别帧类型
+      uint8_t header = rx_buffer_[0];
+      uint8_t tail = rx_buffer_[kPacketSize - 1];
+      
+      bool is_valid_frame = false;
+      bool is_aim_frame = false;
+      bool is_nav_frame = false;
+      
+      // 检查是否为自瞄系统帧 (0x71 开头，0x4C 结尾)
+      if (header == 0x71 && tail == 0x4C) {
+        is_valid_frame = true;
+        is_aim_frame = true;
+      }
+      // 检查是否为导航系统帧 (0x72 开头，0x21 或 0x4D 结尾)
+      else if (header == 0x72 && (tail == 0x21 || tail == 0x4D)) {
+        is_valid_frame = true;
+        is_nav_frame = true;
+      }
+      
+      if (is_valid_frame) {
+        // 提取并发布到对应的topic
+        std_msgs::msg::UInt8MultiArray out_msg;
+        out_msg.data.assign(rx_buffer_.begin(), rx_buffer_.begin() + kPacketSize);
+        
+        if (is_aim_frame && enable_aim_) {
+          rx_aim_pub_->publish(out_msg);
+        } else if (is_nav_frame) {
+          rx_nav_pub_->publish(out_msg);
+        }
+        
+        // 移除已消费帧
+        rx_buffer_.erase(rx_buffer_.begin(), rx_buffer_.begin() + kPacketSize);
+      } else {
+        // 非法帧，尝试找到下一个可能的帧头
+        auto it_71 = std::find(rx_buffer_.begin() + 1, rx_buffer_.end(), 0x71);
+        auto it_72 = std::find(rx_buffer_.begin() + 1, rx_buffer_.end(), 0x72);
+        
+        auto next_header = rx_buffer_.end();
+        if (it_71 != rx_buffer_.end() && it_72 != rx_buffer_.end()) {
+          next_header = (it_71 < it_72) ? it_71 : it_72;
+        } else if (it_71 != rx_buffer_.end()) {
+          next_header = it_71;
+        } else if (it_72 != rx_buffer_.end()) {
+          next_header = it_72;
+        }
+        
+        if (next_header != rx_buffer_.end()) {
+          // 丢弃到下一个帧头之前的数据
+          rx_buffer_.erase(rx_buffer_.begin(), next_header);
+        } else {
+          // 没有找到有效帧头，清空缓冲
+          rx_buffer_.clear();
+          break;
+        }
+      }
+    }
+  }
+
   // members
   std::string port_;
   int         baud_{115200};
   int         reopen_interval_ms_{500};
   std::chrono::milliseconds idle_sleep_duration_{1};
+  bool enable_aim_{false};
 
-  rclcpp::Subscription<std_msgs::msg::UInt8MultiArray>::SharedPtr tx_sub_;
-  rclcpp::Publisher<std_msgs::msg::UInt8MultiArray>::SharedPtr    rx_pub_;
+  // 导航系统的订阅和发布
+  rclcpp::Subscription<std_msgs::msg::UInt8MultiArray>::SharedPtr tx_nav_sub_;
+  rclcpp::Publisher<std_msgs::msg::UInt8MultiArray>::SharedPtr    rx_nav_pub_;
+  
+  // 自瞄系统的订阅和发布（可选）
+  rclcpp::Subscription<std_msgs::msg::UInt8MultiArray>::SharedPtr tx_aim_sub_;
+  rclcpp::Publisher<std_msgs::msg::UInt8MultiArray>::SharedPtr    rx_aim_pub_;
 
   std::thread       read_thread_;
   std::atomic<bool> running_{false};

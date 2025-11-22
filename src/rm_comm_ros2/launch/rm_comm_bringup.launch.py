@@ -10,6 +10,7 @@ def generate_launch_description():
     reopen_interval_ms = LaunchConfiguration("reopen_interval_ms", default="500")
     read_loop_hz = LaunchConfiguration("read_loop_hz", default="200.0")
     tx_hz = LaunchConfiguration("tx_hz", default="100.0")
+    enable_aim = LaunchConfiguration("enable_aim", default="false")
 
     return LaunchDescription(
         [
@@ -20,6 +21,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument("read_loop_hz", default_value=read_loop_hz),
             DeclareLaunchArgument("tx_hz", default_value=tx_hz),
+            DeclareLaunchArgument("enable_aim", default_value=enable_aim),
             # 直接使用本包串口节点，无需 serial_driver
             Node(
                 package="rm_comm_ros2",
@@ -31,6 +33,7 @@ def generate_launch_description():
                         "baud": baud,
                         "reopen_interval_ms": reopen_interval_ms,
                         "read_loop_hz": read_loop_hz,
+                        "enable_aim": enable_aim,
                     }
                 ],
             ),
