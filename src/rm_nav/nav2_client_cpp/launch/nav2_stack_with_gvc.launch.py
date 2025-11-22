@@ -122,6 +122,21 @@ def generate_launch_description():
                     },
                 ],
             ),
+            # Costmap nodes
+            Node(
+                package="nav2_costmap_2d",
+                executable="nav2_costmap_2d",
+                name="local_costmap",
+                output="screen",
+                parameters=[default_params, {"use_sim_time": use_sim_time}],
+            ),
+            Node(
+                package="nav2_costmap_2d",
+                executable="nav2_costmap_2d",
+                name="global_costmap",
+                output="screen",
+                parameters=[default_params, {"use_sim_time": use_sim_time}],
+            ),
         ]
     )
 
@@ -131,6 +146,8 @@ def generate_launch_description():
         "behavior_server",
         "bt_navigator",
         "map_server",
+        "local_costmap",  # 添加 local_costmap 节点
+        "global_costmap",  # 添加 global_costmap 节点
     ]
 
     nodes.append(
