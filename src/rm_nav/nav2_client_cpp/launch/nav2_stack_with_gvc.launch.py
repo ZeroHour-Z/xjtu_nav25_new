@@ -122,7 +122,7 @@ def generate_launch_description():
                     },
                 ],
             ),
-            # Costmap nodes
+            # Costmap nodes for obstacle avoidance
             Node(
                 package="nav2_costmap_2d",
                 executable="nav2_costmap_2d",
@@ -146,8 +146,8 @@ def generate_launch_description():
         "behavior_server",
         "bt_navigator",
         "map_server",
-        "local_costmap",  # 添加 local_costmap 节点
-        "global_costmap",  # 添加 global_costmap 节点
+        "local_costmap",  # Costmap
+        "global_costmap",  # Costmap
     ]
 
     nodes.append(
