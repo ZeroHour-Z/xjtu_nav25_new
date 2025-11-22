@@ -366,38 +366,38 @@ class TopicStringEquals(py_trees.behaviour.Behaviour):
 		self._last_value = val 
 
 
-# @register("ParamStringCondition")
-# class ParamStringCondition(py_trees.behaviour.Behaviour):
-# 	"""检查ROS参数中的字符串值是否等于期望值"""
-# 	def __init__(self, name: str, node: Node, param: str, expected: str, latched_ok: bool = False):
-# 		super().__init__(name)
-# 		self.node = node
-# 		self.param = param.lstrip("/")
-# 		self.expected = str(expected)
-# 		self.latched_ok = bool(latched_ok)
-# 		self._latched_success: bool = False
+@register("ParamStringCondition")
+class ParamStringCondition(py_trees.behaviour.Behaviour):
+	"""检查ROS参数中的字符串值是否等于期望值"""
+	def __init__(self, name: str, node: Node, param: str, expected: str, latched_ok: bool = False):
+		super().__init__(name)
+		self.node = node
+		self.param = param.lstrip("/")
+		self.expected = str(expected)
+		self.latched_ok = bool(latched_ok)
+		self._latched_success: bool = False
 
-# 	def setup(self, **kwargs) -> None:
-# 		try:
-# 			if not self.node.has_parameter(self.param):
-# 				self.node.declare_parameter(self.param, "")
-# 		except Exception:
-# 			pass
+	def setup(self, **kwargs) -> None:
+		try:
+			if not self.node.has_parameter(self.param):
+				self.node.declare_parameter(self.param, "")
+		except Exception:
+			pass
 
-# 	def initialise(self) -> None:
-# 		if not self.latched_ok:
-# 			self._latched_success = False
+	def initialise(self) -> None:
+		if not self.latched_ok:
+			self._latched_success = False
 
-# 	def update(self) -> Status:
-# 		if self._latched_success:
-# 			return Status.SUCCESS
-# 		try:
-# 			param_value = self.node.get_parameter(self.param).value
-# 		except Exception:
-# 			return Status.RUNNING
-# 		if param_value is None:
-# 			return Status.RUNNING
-# 		ok = str(param_value) == self.expected
-# 		if ok and self.latched_ok:
-# 			self._latched_success = True
-# 		return Status.SUCCESS if ok else Status.FAILURE
+	def update(self) -> Status:
+		if self._latched_success:
+			return Status.SUCCESS
+		try:
+			param_value = self.node.get_parameter(self.param).value
+		except Exception:
+			return Status.RUNNING
+		if param_value is None:
+			return Status.RUNNING
+		ok = str(param_value) == self.expected
+		if ok and self.latched_ok:
+			self._latched_success = True
+		return Status.SUCCESS if ok else Status.FAILURE

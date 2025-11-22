@@ -8,6 +8,7 @@ from .conditions import WaitForParamBool
 from .utilities import Wait, SetBlackboard, Success, CheckBlackboard, RecordStartPosition, NavigateToStartPosition
 from .publishers import PublishString
 from .conditions import TopicStringEquals
+from .conditions import ParamStringCondition
 
 __all__ = [
 	"TopicBoolCondition",
@@ -23,6 +24,7 @@ __all__ = [
 	"CheckBlackboard",
 	"PublishString",
 	"TopicStringEquals",
+	"ParamStringCondition",
 	"RecordStartPosition",
 	"NavigateToStartPosition",
 ] 
