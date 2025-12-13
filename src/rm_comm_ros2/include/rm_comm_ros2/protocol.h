@@ -13,8 +13,9 @@ typedef struct {            // 都使用朴素机器人坐标系,前x,左y,上z
   uint16_t hp_remain;       // 16位 剩余生命值
   uint16_t bullet_remain;   // 16位 剩余子弹量
   float    time_remain;     // 32位 剩余时间，单位秒
-  float    time_test;       // 32位 测试时间，单位秒
-  uint32_t reserve_2 : 16;  // 16位 保留
+  uint8_t  is_revive;       // 8位 保留
+  float    time_test;       // 32位 测试时间，单位秒//没用
+  uint32_t reserve_2 : 8;  // 8位 保留
   uint32_t reserve_3 : 32;  // 32位 保留
   uint32_t reserve_4 : 32;  // 32位 保留
   uint32_t reserve_5 : 32;  // 32位 保留
@@ -69,7 +70,7 @@ typedef struct {           // 都使用朴素机器人坐标系,前x,左y,上z
   float    yaw_current;    // 当前云台偏航角
   float    yaw_desired;    // 期望云台偏航角
   uint8_t  sentry_region;  // 8位哨兵区域
-  float    time_test;      // 32位测试时间，单位秒
+  float    time_test;      // 32位测试时间，单位秒//没用
   uint32_t reserve_2 : 8;  // 8位保留
   uint32_t reserve_3 : 32; // 32位保留
   uint32_t reserve_4 : 32; // 32位保留
