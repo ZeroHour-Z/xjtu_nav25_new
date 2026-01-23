@@ -61,9 +61,20 @@ def generate_launch_description():
     map_pcd_arg = DeclareLaunchArgument(
         "map_pcd",
         default_value=PathJoinSubstitution(
-            [FindPackageShare("rm_bringup"), "PCD", "blue", "map.pcd"]
+            [FindPackageShare("rm_bringup"), "PCD", "test", "test.pcd"]
         ),
     )
+
+    # Tunable parameters for global localization
+    freq_localization_arg = DeclareLaunchArgument(
+        "freq_localization", default_value="1.0"
+    )
+    localization_th_arg = DeclareLaunchArgument("localization_th", default_value="0.2")
+    map_voxel_size_arg = DeclareLaunchArgument("map_voxel_size", default_value="0.3")
+    scan_voxel_size_arg = DeclareLaunchArgument("scan_voxel_size", default_value="0.3")
+    fov_arg = DeclareLaunchArgument("fov", default_value="6.28")
+    fov_far_arg = DeclareLaunchArgument("fov_far", default_value="30.0")
+    use_gicp_arg = DeclareLaunchArgument("use_gicp", default_value="false")
 
     # Common configurations
     backend = LaunchConfiguration("backend")
@@ -93,6 +104,7 @@ def generate_launch_description():
         name="laser_mapping",
         output="screen",
         parameters=[faster_lio_params, {"use_sim_time": use_sim_time}],
+        remappings=[("/Odometry", "/odom")],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'faster_lio'"])),
     )
 
@@ -136,6 +148,13 @@ def generate_launch_description():
                 "map_frame": "map3d",
                 "odom_frame": "camera_init",
                 "base_link_frame": "base_link",
+                "freq_localization": LaunchConfiguration("freq_localization"),
+                "localization_th": LaunchConfiguration("localization_th"),
+                "map_voxel_size": LaunchConfiguration("map_voxel_size"),
+                "scan_voxel_size": LaunchConfiguration("scan_voxel_size"),
+                "fov": LaunchConfiguration("fov"),
+                "fov_far": LaunchConfiguration("fov_far"),
+                "use_gicp": LaunchConfiguration("use_gicp"),
             }
         ],
         condition=IfCondition(run_global),
@@ -218,6 +237,13 @@ def generate_launch_description():
             point_lio_ros2_params_arg,
             run_global_arg,
             map_pcd_arg,
+            freq_localization_arg,
+            localization_th_arg,
+            map_voxel_size_arg,
+            scan_voxel_size_arg,
+            fov_arg,
+            fov_far_arg,
+            use_gicp_arg,
             fast_lio_node,
             faster_lio_node,
             point_lio_ros2_node,

@@ -12,7 +12,7 @@ def generate_launch_description():
 
     # 用功能包查找 newMap.yaml（按你之前的结构 PCD/red/newMap.yaml）
     map_yaml = PathJoinSubstitution(
-        [FindPackageShare("rm_bringup"), "PCD", "red", "newMap.yaml"],
+        [FindPackageShare("rm_bringup"), "PCD", "test", "newMap.yaml"],
     )
     map_yaml_param = ParameterValue(map_yaml, value_type=str)  # 确保作为字符串求值
 

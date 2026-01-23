@@ -134,6 +134,8 @@ private:
   void publishTxPacket() {
     nav_info_.frame_header = 0x72;
     nav_info_.frame_tail   = 0x4D;
+    nav_info_.x_speed = 0.2f;
+    nav_info_.y_speed = 0.0f;
 
     double target_x = 0.0, target_y = 0.0;
     (void) this->get_parameter("target_x", target_x);

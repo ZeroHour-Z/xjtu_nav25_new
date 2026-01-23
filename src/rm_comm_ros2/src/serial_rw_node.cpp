@@ -50,7 +50,7 @@ namespace {
 class SerialRwNode : public rclcpp::Node {
 public:
   SerialRwNode() : Node("serial_rw_node") {
-    port_               = this->declare_parameter<std::string>("port", "/dev/ttyACM0");
+    port_               = this->declare_parameter<std::string>("port", "/dev/ttyUSB0");
     baud_               = this->declare_parameter<int>("baud", 115200);
     reopen_interval_ms_ = this->declare_parameter<int>("reopen_interval_ms", 500);
     double read_loop_hz = this->declare_parameter<double>("read_loop_hz", 200.0);
@@ -169,6 +169,13 @@ private:
           // 提取并发布
           navCommand_t n_data;
           std::memcpy(&n_data, rx_buffer_.data(), kPktSize);
+          
+          // 打印收到的（724D）
+          RCLCPP_INFO(this->get_logger(),
+                      "Frame: [Color:%d State:%d HP:%d Bullet:%d Enemy_x:%f Enemy_y:%f is_revive:%d]",
+                      (int)n_data.color, (int)n_data.eSentryState,
+                      (int)n_data.hp_remain, (int)n_data.bullet_remain,
+                      n_data.enemy_x, n_data.enemy_y, (int)n_data.is_revive);
 
           std_msgs::msg::UInt8MultiArray out_msg;
           const uint8_t*                 byte_ptr  = reinterpret_cast<const uint8_t*>(&n_data);

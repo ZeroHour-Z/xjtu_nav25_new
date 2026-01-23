@@ -5,10 +5,10 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    port = LaunchConfiguration("port", default="/dev/ttyACM0")
+    port = LaunchConfiguration("port", default="/dev/ttyUSB0")
     baud = LaunchConfiguration("baud", default="115200")
     reopen_interval_ms = LaunchConfiguration("reopen_interval_ms", default="500")
-    read_loop_hz = LaunchConfiguration("read_loop_hz", default="200")
+    read_loop_hz = LaunchConfiguration("read_loop_hz", default="200.0")
     tx_hz = LaunchConfiguration("tx_hz", default="100.0")
 
     return LaunchDescription(
