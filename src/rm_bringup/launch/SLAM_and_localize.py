@@ -32,7 +32,7 @@ def generate_launch_description():
     # Default PCD output to source package tmp/ to avoid install/share path
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")[2:]
     default_src_pcd_path = (
-        f"/home/ovalene/xjtu_nav25/src/rm_localization/rm_bringup/tmp/pcd_{ts}.pcd"
+        f"/home/xjturm/xjtu_nav25/src/rm_bringup/tmp/pcd_{ts}.pcd"
     )
     pcd_save_file_arg = DeclareLaunchArgument(
         "pcd_save_file",
@@ -126,6 +126,8 @@ def generate_launch_description():
         output="screen",
         parameters=[fast_lio_params, common_params],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'fast_lio'"])),
+        # Fix libusb conflict with MVS SDK - prioritize system libusb
+        additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
 
     faster_lio_node = Node(
@@ -136,6 +138,8 @@ def generate_launch_description():
         parameters=[faster_lio_params, common_params],
         remappings=[("/Odometry", "/odom")],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'faster_lio'"])),
+        # Fix libusb conflict with MVS SDK - prioritize system libusb
+        additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
 
     point_lio_ros2_node = Node(
@@ -146,6 +150,8 @@ def generate_launch_description():
         remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
         parameters=[point_lio_ros2_params, common_params],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'point_lio'"])),
+        # Fix libusb conflict with MVS SDK - prioritize system libusb
+        additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
 
     # Map publisher (PCD)
@@ -215,10 +221,10 @@ def generate_launch_description():
         name="tf_body2base_link",
         arguments=[
             "0.0",
-            "0.12",
-            "-0.28",
+            "0.20",
+            "-0.25",
             "1.5707963267948966",
-            "0.27",
+            "0.2617993877991494",
             "0",
             "body",
             "base_link",

@@ -118,6 +118,8 @@ def generate_launch_description():
         ],
         parameters=[point_lio_ros2_params],
         condition=IfCondition(equals(backend, "point_lio")),
+        # Fix libusb conflict with MVS SDK - prioritize system libusb
+        additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
     # Default static transform map3d -> camera_init (identity)
     tf_map3dto2d = Node(
@@ -140,10 +142,10 @@ def generate_launch_description():
         name="tf_body2base_link",
         arguments=[
             "0.0",
-            "0.12",
-            "-0.28",
+            "0.20",
+            "-0.25",
             "1.5707963267948966",
-            "0.27",
+            "0.2617993877991494",
             "0",
             "body",
             "base_link",

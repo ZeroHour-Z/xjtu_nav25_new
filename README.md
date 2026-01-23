@@ -90,7 +90,7 @@ ros2 launch livox_ros_driver2 msg_MID360_launch.py #
 > 迁移到ros2之后,point_lio的延迟变得大且不稳定,原因未知,暂时不建议在线跑。
 
 ```bash
-ros2 launch rm_bringup SLAM_and_localize.py backend:=point_lio rviz:=true SLAM_mapping_only.py # 仅建图
+ros2 launch rm_bringup SLAM_mapping.py backend:=point_lio rviz:=true  # 仅建图
 ros2 launch rm_bringup SLAM_odom_only.py backend:=faster_lio rviz:=true # 仅里程计
 ros2 launch rm_bringup SLAM_and_localize.py backend:=faster_lio rviz:=true # 启动重定位和里程计
 ```

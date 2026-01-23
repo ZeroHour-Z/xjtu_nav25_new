@@ -46,8 +46,8 @@ int main(int argc, char **argv) {
     //     rate.sleep();
     // }
 
-    // LOG(INFO) << "finishing mapping";
-    // laser_mapping->Finish();
+    LOG(INFO) << "finishing mapping";
+    laser_mapping->Finish();
 
     // faster_lio::Timer::PrintAll();
     // LOG(INFO) << "save trajectory to: " << FLAGS_traj_log_file;
