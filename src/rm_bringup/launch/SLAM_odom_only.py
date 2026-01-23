@@ -83,6 +83,8 @@ def generate_launch_description():
         output="screen",
         parameters=[fast_lio_params],
         condition=IfCondition(equals(backend, "fast_lio")),
+        # Fix libusb conflict with MVS SDK - prioritize system libusb
+        additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
     faster_lio_node = Node(
         package="faster_lio_ros2",
@@ -92,6 +94,8 @@ def generate_launch_description():
         parameters=[faster_lio_params],
         remappings=[("/Odometry", "/odom")],
         condition=IfCondition(equals(backend, "faster_lio")),
+        # Fix libusb conflict with MVS SDK - prioritize system libusb
+        additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
     # point_lio_ros2_node = Node(
     #     package="point_lio_ros2",
