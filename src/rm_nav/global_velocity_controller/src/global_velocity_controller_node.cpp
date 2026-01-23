@@ -289,12 +289,11 @@ private:
     // 6. 航向控制,下位机只需要给出角度即可
     double target_yaw = std::atan2(ey_lookahead, ex_lookahead);
 
-    // 注释掉硬编码的测试代码，使用PID控制器计算的速度
-    // vx_map_cmd = 1.0;
-    // vy_map_cmd = 0.0;
+    vx_map_cmd = 1.0;
+    vy_map_cmd = 0.0;
     // 7. 将map系速度指令转换为base_link系
-    // 使用之前计算的predicted_yaw（已在第254-266行计算），而不是硬编码的值
-    // predicted_yaw = current_yaw + 0.1 + 0.0 * std::hypot(vx_map_cmd, vy_map_cmd);
+    // current_yaw += ;
+    predicted_yaw        = current_yaw + 0.1 + 0.0 * std::hypot(vx_map_cmd, vy_map_cmd);
     const double cos_yaw = std::cos(predicted_yaw);
     const double sin_yaw = std::sin(predicted_yaw);
 

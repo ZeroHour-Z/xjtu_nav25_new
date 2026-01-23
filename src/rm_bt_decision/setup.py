@@ -10,8 +10,6 @@ setup(
         ('share/ament_index/resource_index/packages', [f'resource/{package_name}']),
         (f'share/{package_name}', ['package.xml']),
         (f'share/{package_name}/config/trees', ['config/trees/nav.yaml']),
-        (f'share/{package_name}/config/trees', ['config/trees/market.yaml']),
-        (f'share/{package_name}/config/trees', ['config/trees/RMUL.yaml']),
         (f'share/{package_name}/launch', ['launch/bt.launch.py']),
     ],
     install_requires=['setuptools', 'PyYAML'],

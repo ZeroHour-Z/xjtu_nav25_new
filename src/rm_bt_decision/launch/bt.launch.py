@@ -8,7 +8,7 @@ import os
 
 def generate_launch_description():
 	pkg_share = get_package_share_directory('rm_bt_decision')
-	default_tree = os.path.join(pkg_share, 'config', 'trees', 'market.yaml')
+	default_tree = os.path.join(pkg_share, 'config', 'trees', 'nav.yaml')
 
 	tree_arg = DeclareLaunchArgument(
 		'tree', default_value=default_tree,

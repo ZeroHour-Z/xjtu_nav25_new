@@ -17,18 +17,24 @@ class HandlerNode : public rclcpp::Node {
 public:
   HandlerNode() : Node("handler_node") {
     patrol_group_pub_ = this->create_publisher<std_msgs::msg::String>("/patrol_group", 10);
+
     tx_pub_ = this->create_publisher<std_msgs::msg::UInt8MultiArray>("/rm_comm/tx_packet", 10);
-    rx_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>("/rm_comm/rx_packet", 100, 
-      std::bind(&HandlerNode::onRxPacket, this, std::placeholders::_1));
-    cmd_vel_sub_ = this->create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, 
-      std::bind(&HandlerNode::onCmdVel, this, std::placeholders::_1));
-    odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/Odometry", 10, 
-      std::bind(&HandlerNode::onOdom, this, std::placeholders::_1));
+
+    rx_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
+        "/rm_comm/rx_packet", 100,
+        std::bind(&HandlerNode::onRxPacket, this, std::placeholders::_1));
+
+    cmd_vel_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
+        "/cmd_vel", 10, std::bind(&HandlerNode::onCmdVel, this, std::placeholders::_1));
+
+    odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+        "/Odometry", 10, std::bind(&HandlerNode::onOdom, this, std::placeholders::_1));
 
     // 只声明一次参数，避免重复声明异常
     this->declare_parameter<double>("tx_hz", 100.0);
     this->declare_parameter<double>("target_x", 0.0);
     this->declare_parameter<double>("target_y", 0.0);
+
     double hz = 100.0;
     this->get_parameter("tx_hz", hz);
     tx_timer_ = this->create_wall_timer(
@@ -56,7 +62,7 @@ private:
 
   void onRxPacket(const std_msgs::msg::UInt8MultiArray::SharedPtr msg) {
     // 严格校验：长度与头尾
-    constexpr size_t  kRxPacketSize  = sizeof(marketCommand_t);
+    constexpr size_t  kRxPacketSize  = sizeof(navCommand_t);
     constexpr uint8_t kHeader        = 0x72;
     constexpr uint8_t kTailExpected  = 0x21;
 
@@ -73,18 +79,11 @@ private:
     }
 
     // 2. 数据转换：使用 std::memcpy 将字节流复制到结构体变量中
-    marketCommand_t received_cmd;
+    navCommand_t received_cmd;
     std::memcpy(&received_cmd,       // 目标地址：结构体变量的内存地址
                 msg->data.data(),    // 源地址：vector数据的起始内存地址
-                sizeof(marketCommand_t) // 复制长度：结构体的大小
+                sizeof(navCommand_t) // 复制长度：结构体的大小
     );
-
-    // 调试：打印关键字节位置的数据
-    if (msg->data.size() >= 15) {
-      RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                           "Raw bytes [9-14]: state=0x%02X command=0x%02X color=0x%02X event=0x%02X hp_low=0x%02X hp_high=0x%02X",
-                           msg->data[1], msg->data[2], msg->data[3], msg->data[4], msg->data[5], msg->data[6]);
-    }
 
     // 3. 协议验证：在转换成结构体后，检查帧尾等成员变量是否符合协议
     if (received_cmd.frame_tail != kTailExpected) {
@@ -94,17 +93,18 @@ private:
     }
     // 4. 调用处理函数：所有检查通过后，数据有效，进行处理
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                         "Successfully decoded marketCommand_t packet.");
-    last_market_cmd_ = received_cmd;
+                         "Successfully decoded navCommand_t packet.");
+    last_cmd_ = received_cmd;
     // RCLCPP_WARN(this->get_logger(), "Bullet: %d", (int)received_cmd.bullet_remain);
-    handleMarketCommand(last_market_cmd_);
+    // handleNavCommand(last_cmd_);
+    // RCLCPP_INFO(this->get_logger(), "Time_test: %f Now: %f", received_cmd.time_test,
+    //             static_cast<float>(this->now().seconds() - 1759396608.000000));
   }
 
   void handleNavCommand(const navCommand_t& cmd) {
     // std::cout << "hp_remain:" << cmd.hp_remain << std::endl;
-    // printf("bullet_remain:%d\n", cmd.bullet_remain);
+    printf("bullet_remain:%d\n", cmd.bullet_remain);
     // Best-effort mirror of hp/ammo to BT node params
-    // 连接到行为树节点
     static const std::string kBtNodeName = "/rm_bt_decision_node";
     if (!bt_param_client_) {
       bt_param_client_ =
@@ -113,23 +113,13 @@ private:
     if (!bt_param_client_->service_is_ready()) return;
 
     // Parameter names (fallback to defaults if not configured)
-    // 参数名称转换成字符串
     std::string hp_param   = "hp";
     std::string ammo_param = "ammo";
-    std::string state_param = "sentry_state";
 
-    // 将状态枚举值转换为字符串
-    std::string state_str = "unknown";
-    auto state_it = state_map.find(cmd.eSentryState);
-    if (state_it != state_map.end()) {
-      state_str = state_it->second;
-    }
-
-    // Write values 发布到行为树
+    // Write values
     std::vector<rclcpp::Parameter> ps = {
         rclcpp::Parameter(hp_param, static_cast<double>(cmd.hp_remain)),
         rclcpp::Parameter(ammo_param, static_cast<double>(cmd.bullet_remain)),
-        rclcpp::Parameter(state_param, state_str),
     };
     try {
       (void) bt_param_client_->set_parameters(ps);
@@ -139,70 +129,6 @@ private:
 
     // auto cmd.sentry_command;
     // patrol_group_pub_->publish(std_msgs::msg::String());
-  }
-
-  void handleMarketCommand(const marketCommand_t& cmd) {
-    // 将状态枚举值转换为字符串
-    std::string state_str = "unknown";
-    auto state_it = state_map.find(cmd.eSentryState);
-    if (state_it != state_map.end()) {
-      state_str = state_it->second;
-    }
-    
-    // 将事件枚举值转换为字符串
-    std::string event_str = "none";
-    auto event_it = event_map.find(cmd.eSentryEvent);
-    if (event_it != event_map.end()) {
-      event_str = event_it->second;
-    }
-    
-    // 打印电控传来的 sentry_state 值（数字值和状态名称）
-    RCLCPP_INFO(this->get_logger(), 
-                "[电控状态] sentry_state = %d (%s), sentry_event = %d (%s)",
-                cmd.eSentryState, state_str.c_str(), cmd.eSentryEvent, event_str.c_str());
-    
-    // 打印完整信息
-    RCLCPP_INFO(this->get_logger(),
-                "Market Command - color:%d state:%d(%s) event:%d(%s) hp:%d bullet:%d",
-                cmd.color, 
-                cmd.eSentryState, state_str.c_str(), 
-                cmd.eSentryEvent, event_str.c_str(), 
-                cmd.hp_remain, cmd.bullet_remain);
-
-    // 连接到行为树节点
-    static const std::string kBtNodeName = "/rm_bt_decision_node";
-    if (!bt_param_client_) {
-      bt_param_client_ =
-          std::make_shared<rclcpp::SyncParametersClient>(this->shared_from_this(), kBtNodeName);
-    }
-    if (!bt_param_client_->service_is_ready()) return;
-
-    // 参数名称
-    // std::string hp_param   = "hp";
-    // std::string ammo_param = "ammo";
-    std::string state_param = "sentry_state";
-    std::string event_param = "sentry_event";
-    // std::string x_param = "x_current";
-    // std::string y_param = "y_current";
-    // std::string stop_param = "stop";
-    // std::string color_param = "color";
-
-    // 发布到行为树
-    std::vector<rclcpp::Parameter> ps = {
-        // rclcpp::Parameter(hp_param, static_cast<double>(cmd.hp_remain)),
-        // rclcpp::Parameter(ammo_param, static_cast<double>(cmd.bullet_remain)),
-        rclcpp::Parameter(state_param, state_str),
-        rclcpp::Parameter(event_param, event_str),
-        // rclcpp::Parameter(x_param, static_cast<double>(cmd.x_current)),
-        // rclcpp::Parameter(y_param, static_cast<double>(cmd.y_current)),
-        // rclcpp::Parameter(stop_param, static_cast<int>(cmd.stop)),
-        // rclcpp::Parameter(color_param, static_cast<int>(cmd.color)),
-    };
-    try {
-      (void) bt_param_client_->set_parameters(ps);
-    } catch (...) {
-      // ignore
-    }
   }
 
   void publishTxPacket() {
@@ -233,11 +159,10 @@ private:
 
   rclcpp::TimerBase::SharedPtr tx_timer_;
 
-  navInfo_t       nav_info_{};
-  navCommand_t    last_cmd_{};
-  marketCommand_t last_market_cmd_{};
-  uint8_t         last_stop_{0};
-  uint8_t         last_color_{0};
+  navInfo_t    nav_info_{};
+  navCommand_t last_cmd_{};
+  uint8_t      last_stop_{0};
+  uint8_t      last_color_{0};
 
   // Parameter client for BT node
   std::shared_ptr<rclcpp::SyncParametersClient> bt_param_client_;

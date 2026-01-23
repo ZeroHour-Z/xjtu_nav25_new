@@ -138,10 +138,10 @@ private:
       if (n > 0) {
         rx_buffer_.insert(rx_buffer_.end(), buf, buf + n);
 
-        // 常量：仅接受 0x72 开头、0x21 结尾的 marketCommand_t 帧
+        // 常量：仅接受 0x72 开头、0x21 结尾的 navCommand_t 帧
         constexpr uint8_t kHeader      = 0x72;
         constexpr uint8_t kTailCommand = 0x21;
-        constexpr size_t  kPktSize     = sizeof(marketCommand_t); // 64
+        constexpr size_t  kPktSize     = sizeof(navCommand_t); // 64
 
         // 分帧与重同步
         while (true) {
@@ -167,7 +167,7 @@ private:
           }
 
           // 提取并发布
-          marketCommand_t n_data;
+          navCommand_t n_data;
           std::memcpy(&n_data, rx_buffer_.data(), kPktSize);
 
           std_msgs::msg::UInt8MultiArray out_msg;
