@@ -170,7 +170,7 @@ private:
           navCommand_t n_data;
           std::memcpy(&n_data, rx_buffer_.data(), kPktSize);
           
-          // 打印收到的（724D）
+          // 打印收到的（tail:0x21）
           RCLCPP_INFO(this->get_logger(),
                       "Frame: [Color:%d State:%d HP:%d Bullet:%d Enemy_x:%f Enemy_y:%f is_revive:%d]",
                       (int)n_data.color, (int)n_data.eSentryState,

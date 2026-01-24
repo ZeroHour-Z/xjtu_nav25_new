@@ -24,7 +24,7 @@ def generate_launch_description():
         description="Backend to run: fast_lio | faster_lio | point_lio",
     )
     rviz_arg = DeclareLaunchArgument("rviz", default_value="true")
-    use_sim_time_arg = DeclareLaunchArgument("use_sim_time", default_value="true")
+    use_sim_time_arg = DeclareLaunchArgument("use_sim_time", default_value="false")
     pcd_save_en_arg = DeclareLaunchArgument("pcd_save_en", default_value="True")
     pcd_save_interval_arg = DeclareLaunchArgument(
         "pcd_save_interval", default_value="-1"
@@ -81,20 +81,18 @@ def generate_launch_description():
     map_arg = DeclareLaunchArgument(
         "map",
         default_value=PathJoinSubstitution(
-            [FindPackageShare("rm_bringup"), "PCD", "blue", "map.pcd"]
+            [FindPackageShare("rm_bringup"), "PCD", "test2", "test2.pcd"]
         ),
     )
 
     # Tunable parameters for global localization
-    freq_localization_arg = DeclareLaunchArgument(
-        "freq_localization", default_value="0.5"
-    )
-    localization_th_arg = DeclareLaunchArgument("localization_th", default_value="0.05")
-    map_voxel_size_arg = DeclareLaunchArgument("map_voxel_size", default_value="0.1")
-    scan_voxel_size_arg = DeclareLaunchArgument("scan_voxel_size", default_value="0.1")
-    fov_arg = DeclareLaunchArgument("fov", default_value="6.28")
-    fov_far_arg = DeclareLaunchArgument("fov_far", default_value="30.0")
-    use_gicp_arg = DeclareLaunchArgument("use_gicp", default_value="false")
+    freq_localization_arg = DeclareLaunchArgument("freq_localization", default_value="1.0") # 重定位频率
+    localization_th_arg = DeclareLaunchArgument("localization_th", default_value="0.08")    # MSE匹配阈值
+    map_voxel_size_arg = DeclareLaunchArgument("map_voxel_size", default_value="0.05")      # 地图降采样体素大小
+    scan_voxel_size_arg = DeclareLaunchArgument("scan_voxel_size", default_value="0.05")    # 扫描降采样体素大小
+    fov_arg = DeclareLaunchArgument("fov", default_value="6.28")                            # 视场角（保持360度）
+    fov_far_arg = DeclareLaunchArgument("fov_far", default_value="30.0")                    # 远距离视场范围
+    use_gicp_arg = DeclareLaunchArgument("use_gicp", default_value="true")                  # 是否使用GICP算法
 
     # Configurations
     backend = LaunchConfiguration("backend")
@@ -236,7 +234,7 @@ def generate_launch_description():
         package="tf2_ros",
         executable="static_transform_publisher",
         name="tf_map3dto2d",
-        arguments=["0", "0", "0.24", "-1.5707963267948966", "0", "0", "map", "map3d"],
+        arguments=["0", "0", "0.24", "0", "0", "0", "map", "map3d"],
         condition=IfCondition(run_global),
     )
 

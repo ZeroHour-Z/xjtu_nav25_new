@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # Centralized bringup for rm_localization backends and optional localization helpers
 
+import os
+
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch.conditions import IfCondition
@@ -61,7 +63,7 @@ def generate_launch_description():
     map_pcd_arg = DeclareLaunchArgument(
         "map_pcd",
         default_value=PathJoinSubstitution(
-            [FindPackageShare("rm_bringup"), "PCD", "test", "test.pcd"]
+            [FindPackageShare("rm_bringup"), "PCD", "test2", "test2.pcd"]
         ),
     )
 
@@ -96,6 +98,8 @@ def generate_launch_description():
         output="screen",
         parameters=[fast_lio_params, {"use_sim_time": use_sim_time}],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'fast_lio'"])),
+        # Fix libusb conflict with MVS SDK - prioritize system libusb
+        additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
 
     faster_lio_node = Node(
@@ -106,6 +110,8 @@ def generate_launch_description():
         parameters=[faster_lio_params, {"use_sim_time": use_sim_time}],
         remappings=[("/Odometry", "/odom")],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'faster_lio'"])),
+        # Fix libusb conflict with MVS SDK - prioritize system libusb
+        additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
 
     point_lio_ros2_node = Node(
@@ -116,6 +122,8 @@ def generate_launch_description():
         remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
         parameters=[point_lio_ros2_params, {"use_sim_time": use_sim_time}],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'point_lio'"])),
+        # Fix libusb conflict with MVS SDK - prioritize system libusb
+        additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
 
     # Optional: global localization helpers + TFs (using fast_lio_localization_ros2)
@@ -213,7 +221,6 @@ def generate_launch_description():
     # RViz (backend-specific default configs are in backend pkgs; use any available)
     # For simplicity, use point_lio_ros2 rviz if present.
     from ament_index_python.packages import get_package_share_directory
-    import os
 
     try:
         rviz_cfg = os.path.join(

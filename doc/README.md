@@ -11,6 +11,13 @@ tags:
 ---
 # 哨兵寄录
 
+## 260124 调试
+
+- 建图，重定位基础功能已经调完
+- 解决了libusb与MVS SDK的冲突，解决方法是在./zshrc里直接加`export LD_LIBRARY_PATH=""`,强制给LD_LIBRARY_PATH赋空值
+- 解决了SLAM_and_localize中的各问题
+- 通信和电控对完
+
 ## 251121 调试
 
 收到电控消息sentry_state为150, 0x96, 但有效范围为0-9, 何意味
@@ -31,7 +38,7 @@ ros2 launch livox_ros_driver2 msg_MID360_launch.py
 > 迁移到ros2之后,point_lio的延迟变得大且不稳定,原因未知,暂时不建议在线跑。
 
 ```bash
-ros2 launch rm_bringup SLAM_and_localize.py backend:=point_lio rviz:=true SLAM_mapping_only.py # 仅建图
+ros2 launch rm_bringup SLAM_mapping_only.py backend:=point_lio rviz:=true # 仅建图
 ros2 launch rm_bringup SLAM_odom_only.py backend:=faster_lio rviz:=true # 仅里程计
 ros2 launch rm_bringup SLAM_and_localize.py backend:=faster_lio rviz:=true # 启动重定位和里程计
 ```
@@ -148,21 +155,6 @@ typedef struct {         // 都使用朴素机器人坐标系,前x,左y,上z
   uint32_t reserve_8 : 32; // 填充到64字节，保持帧尾为最后一字节
   uint8_t  frame_tail;     // 帧尾 0x4D
 } navInfo_t;
-
-// 商场赛使用1239
-enum sentry_state_e {
-  standby = 0,         // 待命状态
-  attack,              // 进攻状态，该状态需视野中出现敌人
-  patrol,              // 巡逻状态，固定几个点的巡逻状态
-  stationary_defense,  // 原地不动防守状态
-  constrained_defense, // 约束防守状态，适用于第一次死亡前，前哨站被击毁后
-  error,               // 错误状态，即进入了不该进入的状态转移表
-  logic,               // 逻辑状态，在这里面做逻辑处理和强制状态转换
-  pursuit,             // 追击状态，此时追击坐标为敌人消失的坐标
-  supply, // 补给状态，弹丸打完或血量低下会进入此状态，attack、patrol、free_defense的补给状态
-  go_attack_outpost, // 只推前哨站状态
-};
-
 ```
 
 ## 项目 Launch 文件：
@@ -172,11 +164,6 @@ enum sentry_state_e {
 ```bash
 # Livox激光雷达驱动 (ROS1版本)
 ros2 launch livox_ros_driver2 msg_MID360_launch.py
-ros2 launch livox_ros_driver2 msg_HAP_launch.py
-ros2 launch livox_ros_driver2 msg_mixed_launch.py
-
-# 点云仿真 (我们添加的)
-ros2 launch pointcloud_simulator pointcloud_sim.launch.py
 ```
 
 2. 定位模块（rm_localization）
@@ -186,11 +173,6 @@ ros2 launch pointcloud_simulator pointcloud_sim.launch.py
 ros2 launch rm_localization_bringup localization_bringup.launch.py backend:=fast_lio
 ros2 launch rm_localization_bringup localization_bringup.launch.py backend:=faster_lio
 ros2 launch rm_localization_bringup localization_bringup.launch.py backend:=point_lio
-
-# 单独启动各算法
-ros2 launch fast_lio mapping.launch.py
-ros2 launch faster_lio_ros2 mapping.launch.py
-ros2 launch fast_lio_localization_ros2 localize.launch.py
 ```
 
 3. 感知模块（rm_perception）
@@ -211,7 +193,7 @@ ros2 launch imu_complementary_filter complementary_filter.launch.py
 4. 导航模块（rm_nav）
 
 ```bash
-# 完整Nav2栈 (推荐)
+# 完整Nav2栈
 ros2 launch nav2_client_cpp nav2_stack_with_gvc_sim.launch.py
 ros2 launch nav2_client_cpp nav2_stack_with_gvc.launch.py
 

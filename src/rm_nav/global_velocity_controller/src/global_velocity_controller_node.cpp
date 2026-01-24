@@ -270,9 +270,11 @@ private:
     // 5. 位置PID控制器 -> 输出期望速度 (在map坐标系下)
     integral_x_ += ex_closest * dt;
     integral_y_ += ey_closest * dt;
+
     // 简单的积分抗饱和
     integral_x_ = std::clamp(integral_x_, -0.5, 0.5);
     integral_y_ = std::clamp(integral_y_, -0.5, 0.5);
+    
     // RCLCPP_INFO(this->get_logger(), "Integral terms: ix=%.3f, iy=%.3f", ki_xy_ * integral_x_,
     // ki_xy_ * integral_y_);
     const double deriv_ex = (ex_lookahead - prev_ex_) / dt;
@@ -289,8 +291,9 @@ private:
     // 6. 航向控制,下位机只需要给出角度即可
     double target_yaw = std::atan2(ey_lookahead, ex_lookahead);
 
-    vx_map_cmd = 1.0;
-    vy_map_cmd = 0.0;
+    // vx_map_cmd = 1.0; // 硬编码速度，测试使用
+    // vy_map_cmd = 0.0; // 硬编码速度，测试使用
+
     // 7. 将map系速度指令转换为base_link系
     // current_yaw += ;
     predicted_yaw        = current_yaw + 0.1 + 0.0 * std::hypot(vx_map_cmd, vy_map_cmd);
@@ -306,7 +309,7 @@ private:
 
     // 加速度限制
     const double max_dv = cmd_accel_limit_linear_ * dt;
-    const double max_dw = cmd_accel_limit_angular_ * dt;
+    // const double max_dw = cmd_accel_limit_angular_ * dt; // 没有使用 max_dw
     vx_out              = std::clamp(vx_out, last_cmd_vx_ - max_dv, last_cmd_vx_ + max_dv);
     vy_out              = std::clamp(vy_out, last_cmd_vy_ - max_dv, last_cmd_vy_ + max_dv);
 
