@@ -61,6 +61,10 @@ public:
 		sub_cloud_registered_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/cloud_registered", 1, std::bind(&GlobalLocalizationNode::cbSaveCurScan, this, std::placeholders::_1));
 		sub_aft_mapped_ = this->create_subscription<nav_msgs::msg::Odometry>("/odom", 1, std::bind(&GlobalLocalizationNode::cbSaveCurOdom, this, std::placeholders::_1));
 		sub_map3d_ = this->create_subscription<sensor_msgs::msg::PointCloud2>("/map3d", qos_reliable, std::bind(&GlobalLocalizationNode::cbInitGlobalMap, this, std::placeholders::_1));
+		// Subscribe to /initialpose from RViz "2D Pose Estimate"
+		sub_initialpose_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+			"/initialpose_rviz", 10,
+			std::bind(&GlobalLocalizationNode::cbInitialPose, this, std::placeholders::_1));
 
 		// Thread
 		worker_ = std::thread(&GlobalLocalizationNode::initializeAndRun, this);
@@ -332,6 +336,48 @@ private:
 		pub_pc_in_map_->publish(out);
 	}
 
+	// Callback for /initialpose from RViz "2D Pose Estimate"
+	void cbInitialPose(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg) {
+		RCLCPP_INFO(this->get_logger(), "Received initial pose from RViz");
+		const auto &p = msg->pose.pose.position;
+		const auto &q = msg->pose.pose.orientation;
+		
+		// Convert to transformation matrix
+		Eigen::Quaterniond quat(q.w, q.x, q.y, q.z);
+		Eigen::Matrix4d T_init = Eigen::Matrix4d::Identity();
+		T_init.block<3,3>(0,0) = quat.normalized().toRotationMatrix();
+		T_init(0,3) = p.x;
+		T_init(1,3) = p.y;
+		T_init(2,3) = p.z;
+		
+		// Update map_to_odom transform
+		if (cur_odom_) {
+			Eigen::Matrix4d T_odom_to_base = poseToMat(*cur_odom_);
+			T_map_to_odom_ = T_init * inverseSE3(T_odom_to_base);
+			RCLCPP_INFO(this->get_logger(), "Updated T_map_to_odom from RViz initial pose");
+			
+			// Publish map_to_odom
+			nav_msgs::msg::Odometry map_to_odom;
+			Eigen::Quaterniond q_out(T_map_to_odom_.block<3,3>(0,0)); q_out.normalize();
+			map_to_odom.pose.pose.position.x = T_map_to_odom_(0,3);
+			map_to_odom.pose.pose.position.y = T_map_to_odom_(1,3);
+			map_to_odom.pose.pose.position.z = T_map_to_odom_(2,3);
+			map_to_odom.pose.pose.orientation.x = q_out.x();
+			map_to_odom.pose.pose.orientation.y = q_out.y();
+			map_to_odom.pose.pose.orientation.z = q_out.z();
+			map_to_odom.pose.pose.orientation.w = q_out.w();
+			map_to_odom.header.stamp = this->now();
+			map_to_odom.header.frame_id = this->get_parameter("map_frame").as_string();
+			pub_map_to_odom_->publish(map_to_odom);
+			
+			publishInitialPose();
+		} else {
+			// If no odom available, use identity for odom_to_base
+			T_map_to_odom_ = T_init;
+			RCLCPP_WARN(this->get_logger(), "No odom available, using initial pose directly as T_map_to_odom");
+		}
+	}
+
 	void cbInitGlobalMap(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
 		if (global_map_) return;
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
@@ -363,6 +409,7 @@ private:
 	rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_cloud_registered_;
 	rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_aft_mapped_;
 	rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_map3d_;
+	rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr sub_initialpose_;
 
 	Eigen::Matrix4d T_map_to_odom_ = Eigen::Matrix4d::Identity();
 };

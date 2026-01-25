@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstring>
 #include <geometry_msgs/msg/twist.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp/parameter_client.hpp>
@@ -28,7 +29,12 @@ public:
         "/cmd_vel", 10, std::bind(&HandlerNode::onCmdVel, this, std::placeholders::_1));
 
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-        "/Odometry", 10, std::bind(&HandlerNode::onOdom, this, std::placeholders::_1));
+        "/odom", 10, std::bind(&HandlerNode::onOdom, this, std::placeholders::_1));
+
+    // 订阅 /goal_pose 用于接收 RViz 2D Goal Pose
+    goal_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
+        "/goal_pose", rclcpp::QoS(10).best_effort(),
+        std::bind(&HandlerNode::onGoalPose, this, std::placeholders::_1));
 
     // 只声明一次参数，避免重复声明异常
     this->declare_parameter<double>("tx_hz", 100.0);
@@ -60,6 +66,14 @@ private:
     nav_info_.y_current = static_cast<float>(msg->pose.pose.position.y);
   }
 
+  void onGoalPose(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+    double x = msg->pose.position.x;
+    double y = msg->pose.position.y;
+    this->set_parameter(rclcpp::Parameter("target_x", x));
+    this->set_parameter(rclcpp::Parameter("target_y", y));
+    RCLCPP_INFO(this->get_logger(), "Goal pose received: x=%.3f, y=%.3f", x, y);
+  }
+
   void onRxPacket(const std_msgs::msg::UInt8MultiArray::SharedPtr msg) {
     // 严格校验：长度与头尾
     constexpr size_t  kRxPacketSize  = sizeof(navCommand_t);
@@ -87,23 +101,20 @@ private:
 
     // 3. 协议验证：在转换成结构体后，检查帧尾等成员变量是否符合协议
     if (received_cmd.frame_tail != kTailExpected) {
-      // RCLCPP_WARN(this->get_logger(), "Invalid frame tail: expected 0x21, got 0x%02X",
-      //              received_cmd.frame_tail);
+      RCLCPP_WARN(this->get_logger(), "Invalid frame tail: expected 0x21, got 0x%02X",
+                   received_cmd.frame_tail);
       return;
     }
     // 4. 调用处理函数：所有检查通过后，数据有效，进行处理
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                         "Successfully decoded navCommand_t packet.");
+    // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+    //                      "Successfully decoded navCommand_t packet.");
     last_cmd_ = received_cmd;
-    // RCLCPP_WARN(this->get_logger(), "Bullet: %d", (int)received_cmd.bullet_remain);
     // handleNavCommand(last_cmd_);
     // RCLCPP_INFO(this->get_logger(), "Time_test: %f Now: %f", received_cmd.time_test,
     //             static_cast<float>(this->now().seconds() - 1759396608.000000));
   }
 
   void handleNavCommand(const navCommand_t& cmd) {
-    // std::cout << "hp_remain:" << cmd.hp_remain << std::endl;
-    printf("bullet_remain:%d\n", cmd.bullet_remain);
     // Best-effort mirror of hp/ammo to BT node params
     static const std::string kBtNodeName = "/rm_bt_decision_node";
     if (!bt_param_client_) {
@@ -134,8 +145,8 @@ private:
   void publishTxPacket() {
     nav_info_.frame_header = 0x72;
     nav_info_.frame_tail   = 0x4D;
-    nav_info_.x_speed = 0.2f;
-    nav_info_.y_speed = 0.0f;
+    // nav_info_.x_speed = 0.2f;
+    // nav_info_.y_speed = 0.0f;
 
     double target_x = 0.0, target_y = 0.0;
     (void) this->get_parameter("target_x", target_x);
@@ -144,6 +155,13 @@ private:
     nav_info_.y_target  = static_cast<float>(target_y);
     // nav_info_.time_test = static_cast<float>(this->now().seconds() - 1759396608.000000);
     // RCLCPP_INFO(this->get_logger(), "send: %f", nav_info_.time_test);
+
+    // 打印发送给电控的数据（tail:0x4D）
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+        "TX -> x_speed: %.3f y_speed: %.3f x_current: %.3f y_current: %.3f x_target: %.3f y_target: %.3f",
+        nav_info_.x_speed, nav_info_.y_speed, 
+        nav_info_.x_current, nav_info_.y_current,
+        nav_info_.x_target, nav_info_.y_target);
 
     std_msgs::msg::UInt8MultiArray out_msg;
     const uint8_t*                 byte_ptr  = reinterpret_cast<const uint8_t*>(&nav_info_);
@@ -158,6 +176,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::UInt8MultiArray>::SharedPtr rx_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr      cmd_vel_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr        odom_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pose_sub_;
 
   rclcpp::TimerBase::SharedPtr tx_timer_;
 

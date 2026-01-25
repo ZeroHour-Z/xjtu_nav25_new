@@ -81,7 +81,7 @@ def generate_launch_description():
     map_arg = DeclareLaunchArgument(
         "map",
         default_value=PathJoinSubstitution(
-            [FindPackageShare("rm_bringup"), "PCD", "test2", "test2.pcd"]
+            [FindPackageShare("rm_bringup"), "PCD", "test", "test.pcd"]
         ),
     )
 

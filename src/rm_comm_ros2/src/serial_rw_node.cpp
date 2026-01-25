@@ -74,8 +74,7 @@ public:
 
     read_thread_ = std::thread(&SerialRwNode::readLoop, this);
 
-    RCLCPP_INFO(this->get_logger(), "serial_rw_node started. Using port %s, baud %d",
-                port_.c_str(), baud_);
+    RCLCPP_INFO(this->get_logger(), "serial_rw_node started, port:%s, baud:%d", port_.c_str(), baud_);
   }
 
   ~SerialRwNode() override {
@@ -170,12 +169,12 @@ private:
           navCommand_t n_data;
           std::memcpy(&n_data, rx_buffer_.data(), kPktSize);
           
-          // 打印收到的（tail:0x21）
-          RCLCPP_INFO(this->get_logger(),
-                      "Frame: [Color:%d State:%d HP:%d Bullet:%d Enemy_x:%f Enemy_y:%f is_revive:%d]",
-                      (int)n_data.color, (int)n_data.eSentryState,
-                      (int)n_data.hp_remain, (int)n_data.bullet_remain,
-                      n_data.enemy_x, n_data.enemy_y, (int)n_data.is_revive);
+          // 打印从电控收到的数据（tail:0x21）
+          // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+          //             "RX -> Color:%d State:%d HP:%d Bullet:%d Enemy_x:%f Enemy_y:%f is_revive:%d",
+          //             (int)n_data.color, (int)n_data.eSentryState,
+          //             (int)n_data.hp_remain, (int)n_data.bullet_remain,
+          //             n_data.enemy_x, n_data.enemy_y, (int)n_data.is_revive);
 
           std_msgs::msg::UInt8MultiArray out_msg;
           const uint8_t*                 byte_ptr  = reinterpret_cast<const uint8_t*>(&n_data);
@@ -259,7 +258,7 @@ private:
       std::lock_guard<std::mutex> lock(fd_mutex_);
       fd_ = fd;
     }
-    RCLCPP_INFO(this->get_logger(), "Opened %s @ %d", port_.c_str(), baud_);
+    RCLCPP_INFO(this->get_logger(), "Serial opened");
     return true;
   }
 
