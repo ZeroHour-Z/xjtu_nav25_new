@@ -32,7 +32,7 @@ def generate_launch_description():
     # Default PCD output to source package tmp/ to avoid install/share path
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")[2:]
     default_src_pcd_path = (
-        f"/home/xjturm/xjtu_nav25/src/rm_bringup/tmp/pcd_{ts}.pcd"
+        f"/home/xjturm/xjtu_nav25_new/src/rm_bringup/tmp/pcd_{ts}.pcd"
     )
     pcd_save_file_arg = DeclareLaunchArgument(
         "pcd_save_file",
@@ -175,7 +175,7 @@ def generate_launch_description():
         parameters=[
             {
                 "map": LaunchConfiguration("map"),
-                "frame_id": "map",
+                "frame_id": "map3d",
                 "rate": 1.0,
                 "use_sim_time": use_sim_time,
             }
@@ -194,7 +194,7 @@ def generate_launch_description():
                 "map2odom_completed": False,
                 "region": 0,
                 "use_sim_time": use_sim_time,
-                "map_frame": "map",
+                "map_frame": "map3d",
                 "odom_frame": "odom",
                 "base_link_frame": "base_link",
                 "freq_localization": LaunchConfiguration("freq_localization"),
@@ -229,7 +229,7 @@ def generate_launch_description():
         parameters=[
             {
                 "use_sim_time": use_sim_time,
-                "map_frame": "map",
+                "map_frame": "map3d",
                 "odom_frame": "odom",
                 "base_link_frame": "base_link",
             }
@@ -244,8 +244,8 @@ def generate_launch_description():
         name="tf_body2base_link",
         arguments=[
             "0.0",
-            "0.20",
-            "-0.25",
+            "0.12848040398218347",
+            "-0.2932452655927712",
             "1.5707963267948966",
             "0.2617993877991494",
             "0",
@@ -259,7 +259,7 @@ def generate_launch_description():
         package="tf2_ros",
         executable="static_transform_publisher",
         name="tf_map3dto2d",
-        arguments=["0", "0", "0.24", "0", "0", "0", "map", "map3d"],
+        arguments=["0", "0", "0.25", "0", "0", "0", "map", "map3d"],
         condition=IfCondition(run_global),
     )
 

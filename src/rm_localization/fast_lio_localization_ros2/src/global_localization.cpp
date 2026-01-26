@@ -39,7 +39,7 @@ public:
 		this->declare_parameter<double>("scan_voxel_size", 0.1);
 		this->declare_parameter<double>("fov", 6.28);
 		this->declare_parameter<double>("fov_far", 30.0);
-		this->declare_parameter<std::string>("map_frame", "map");
+		this->declare_parameter<std::string>("map_frame", "map3d");
 		this->declare_parameter<std::string>("odom_frame", "odom");
 		this->declare_parameter<std::string>("base_link_frame", "base_link");
 		// Keep param for compatibility; not used

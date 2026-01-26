@@ -126,7 +126,7 @@ def generate_launch_description():
         package="tf2_ros",
         executable="static_transform_publisher",
         name="tf_map3dto2d",
-        arguments=["0", "0", "0.24", "-1.5707963267948966", "0", "0", "map", "map3d"],
+        arguments=["0", "0", "0.25", "-1.5707963267948966", "0", "0", "map", "map3d"],
     )
 
     tf_map3d_to_camera_init = Node(
@@ -142,8 +142,8 @@ def generate_launch_description():
         name="tf_body2base_link",
         arguments=[
             "0.0",
-            "0.20",
-            "-0.25",
+            "0.12848040398218347",
+            "-0.2932452655927712",
             "1.5707963267948966",
             "0.2617993877991494",
             "0",

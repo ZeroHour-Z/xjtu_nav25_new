@@ -170,18 +170,18 @@ def generate_launch_description():
     )
     declare_ROLL = DeclareLaunchArgument(
         "ROLL",
-        default_value="0.27",
+        default_value="0.2617993877991494",
         description="安装角 ROLL (rad)",
     )
     declare_R = DeclareLaunchArgument(
         "R",
-        default_value="0.12",
-        description="机体系 Y 方向偏移 (m)",
+        default_value="0.12848040398218347",
+        description="机体系相对于雷达系的 Y 方向偏移 (m)",
     )
     declare_H = DeclareLaunchArgument(
         "H",
-        default_value="0.28",
-        description="机体系 Z 方向高度 (m)",
+        default_value="0.2932452655927712",
+        description="机体系相对于雷达系的 Z 方向偏移 (m)",
     )
 
     ld = LaunchDescription()

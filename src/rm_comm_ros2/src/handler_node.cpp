@@ -18,29 +18,24 @@ class HandlerNode : public rclcpp::Node {
 public:
   HandlerNode() : Node("handler_node") {
     patrol_group_pub_ = this->create_publisher<std_msgs::msg::String>("/patrol_group", 10);
-
     tx_pub_ = this->create_publisher<std_msgs::msg::UInt8MultiArray>("/rm_comm/tx_packet", 10);
-
     rx_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
         "/rm_comm/rx_packet", 100,
         std::bind(&HandlerNode::onRxPacket, this, std::placeholders::_1));
-
     cmd_vel_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
         "/cmd_vel", 10, std::bind(&HandlerNode::onCmdVel, this, std::placeholders::_1));
-
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
         "/odom", 10, std::bind(&HandlerNode::onOdom, this, std::placeholders::_1));
-
-    // 订阅 /goal_pose 用于接收 RViz 2D Goal Pose
     goal_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
         "/goal_pose", rclcpp::QoS(10).best_effort(),
         std::bind(&HandlerNode::onGoalPose, this, std::placeholders::_1));
 
-    // 只声明一次参数，避免重复声明异常
+    // 声明参数
     this->declare_parameter<double>("tx_hz", 100.0);
     this->declare_parameter<double>("target_x", 0.0);
     this->declare_parameter<double>("target_y", 0.0);
-
+    this->declare_parameter<double>("yaw_desired", 0.0);
+    
     double hz = 100.0;
     this->get_parameter("tx_hz", hz);
     tx_timer_ = this->create_wall_timer(
@@ -57,13 +52,18 @@ private:
     // RCLCPP_INFO(this->get_logger(),"cmd_vel:%f",msg->linear.x);
     nav_info_.x_speed     = msg->linear.x;
     nav_info_.y_speed     = msg->linear.y;
-    nav_info_.yaw_current = msg->angular.x;
     nav_info_.yaw_desired = msg->angular.z;
   }
 
   void onOdom(const nav_msgs::msg::Odometry::SharedPtr msg) {
     nav_info_.x_current = static_cast<float>(msg->pose.pose.position.x);
     nav_info_.y_current = static_cast<float>(msg->pose.pose.position.y);
+    
+    // 从四元数提取 yaw 角
+    const auto& q = msg->pose.pose.orientation;
+    double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
+    double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+    nav_info_.yaw_current = static_cast<float>(std::atan2(siny_cosp, cosy_cosp));
   }
 
   void onGoalPose(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
@@ -158,10 +158,11 @@ private:
 
     // 打印发送给电控的数据（tail:0x4D）
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-        "TX -> x_speed: %.3f y_speed: %.3f x_current: %.3f y_current: %.3f x_target: %.3f y_target: %.3f",
+        "TX -> x_speed: %.3f y_speed: %.3f x_current: %.3f y_current: %.3f x_target: %.3f y_target: %.3f yaw_current: %.3f yaw_desired: %.3f",
         nav_info_.x_speed, nav_info_.y_speed, 
         nav_info_.x_current, nav_info_.y_current,
-        nav_info_.x_target, nav_info_.y_target);
+        nav_info_.x_target, nav_info_.y_target,
+        nav_info_.yaw_current, nav_info_.yaw_desired);
 
     std_msgs::msg::UInt8MultiArray out_msg;
     const uint8_t*                 byte_ptr  = reinterpret_cast<const uint8_t*>(&nav_info_);
