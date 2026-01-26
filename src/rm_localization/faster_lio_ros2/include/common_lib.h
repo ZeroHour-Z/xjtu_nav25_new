@@ -84,7 +84,7 @@ struct MeasureGroup {
     double lidar_bag_time_ = 0;
     double lidar_end_time_ = 0;
     PointCloudType::Ptr lidar_ = nullptr;
-    std::deque<sensor_msgs::msg::Imu::ConstPtr> imu_;
+    std::deque<sensor_msgs::msg::Imu::ConstSharedPtr> imu_;
 };
 
 template <typename T>

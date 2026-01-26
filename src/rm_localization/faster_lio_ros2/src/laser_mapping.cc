@@ -64,7 +64,7 @@ bool LaserMapping::LoadParams() {
     this->declare_parameter<bool>("publish.scan_bodyframe_pub_en", true);
     this->declare_parameter<bool>("publish.scan_effect_pub_en", true);
     this->declare_parameter<std::string>("publish.tf_imu_frame", "body");
-    this->declare_parameter<std::string>("publish.tf_world_frame", "camera_init");
+    this->declare_parameter<std::string>("publish.tf_world_frame", "odom");
     this->declare_parameter<bool>("path_save_en", true);
 
     this->get_parameter_or<bool>("publish.path_publish_en", path_pub_en_, true);
@@ -73,7 +73,7 @@ bool LaserMapping::LoadParams() {
     this->get_parameter_or<bool>("publish.scan_bodyframe_pub_en", scan_body_pub_en_, true);
     this->get_parameter_or<bool>("publish.scan_effect_pub_en", scan_effect_pub_en_, true);
     this->get_parameter_or<std::string>("publish.tf_imu_frame", tf_imu_frame_, "body");
-    this->get_parameter_or<std::string>("publish.tf_world_frame", tf_world_frame_, "camera_init");
+    this->get_parameter_or<std::string>("publish.tf_world_frame", tf_world_frame_, "odom");
     this->get_parameter_or<bool>("path_save_en", path_save_en_, true);
 
     this->declare_parameter<int>("max_iteration", 4);
@@ -174,7 +174,7 @@ bool LaserMapping::LoadParams() {
     }
 
     path_.header.stamp = this->now();
-    path_.header.frame_id = "camera_init";
+    path_.header.frame_id = "odom";
 
     voxel_scan_.setLeafSize(filter_size_surf_min, filter_size_surf_min, filter_size_surf_min);
 
@@ -205,7 +205,7 @@ bool LaserMapping::LoadParamsFromYAML(const std::string &yaml_file) {
         scan_body_pub_en_ = yaml["publish"]["scan_bodyframe_pub_en"].as<bool>();
         scan_effect_pub_en_ = yaml["publish"]["scan_effect_pub_en"].as<bool>();
         tf_imu_frame_ = yaml["publish"]["tf_imu_frame"].as<std::string>("body");
-        tf_world_frame_ = yaml["publish"]["tf_world_frame"].as<std::string>("camera_init");
+        tf_world_frame_ = yaml["publish"]["tf_world_frame"].as<std::string>("odom");
         path_save_en_ = yaml["path_save_en"].as<bool>();
 
         options::NUM_MAX_ITERATIONS = yaml["max_iteration"].as<int>();
@@ -308,14 +308,14 @@ void LaserMapping::SubAndPubToROS() {
     if (preprocess_->GetLidarType() == LidarType::AVIA) {
         sub_livox_ = this->create_subscription<livox_ros_driver2::msg::CustomMsg>(
             lidar_topic, qos,
-            [this](const livox_ros_driver2::msg::CustomMsg::ConstPtr &msg) { LivoxPCLCallBack(msg); });
+            [this](const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg) { LivoxPCLCallBack(msg); });
     } else {
         sub_pcl_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            lidar_topic, qos, [this](const sensor_msgs::msg::PointCloud2::ConstPtr &msg) { StandardPCLCallBack(msg); });
+            lidar_topic, qos, [this](const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) { StandardPCLCallBack(msg); });
     }
 
     sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(
-        imu_topic, qos, [this](const sensor_msgs::msg::Imu::ConstPtr &msg) { IMUCallBack(msg); });
+        imu_topic, qos, [this](const sensor_msgs::msg::Imu::ConstSharedPtr &msg) { IMUCallBack(msg); });
 
     // nh.subscribe<sensor_msgs::msg::Imu>(imu_topic, 200000,
     //                                           [this](const sensor_msgs::msg::Imu::ConstPtr &msg) { IMUCallBack(msg);
@@ -323,7 +323,7 @@ void LaserMapping::SubAndPubToROS() {
 
     // ROS publisher init
     path_.header.stamp = this->now();
-    path_.header.frame_id = "camera_init";
+    path_.header.frame_id = "odom";
 
     pub_laser_cloud_world_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered", 100000);
     pub_laser_cloud_body_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered_body", 100000);
@@ -417,8 +417,9 @@ void LaserMapping::Run() {
     // update local map
     Timer::Evaluate([&, this]() { MapIncremental(); }, "    Incremental Mapping");
 
-    LOG(INFO) << "[ mapping ]: In num: " << scan_undistort_->points.size() << " downsamp " << cur_pts
-              << " Map grid num: " << ivox_->NumValidGrids() << " effect num : " << effect_feat_num_;
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, 
+        "In num: %zu Downsamp %d Map grid num: %zu Effect num: %d",
+        scan_undistort_->points.size(), cur_pts, ivox_->NumValidGrids(), effect_feat_num_);
 
     // publish or save map pcd
     if (run_in_offline_) {
@@ -452,7 +453,7 @@ void LaserMapping::Run() {
     frame_num_++;
 }
 
-void LaserMapping::StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::ConstPtr &msg) {
+void LaserMapping::StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
     mtx_buffer_.lock();
     Timer::Evaluate(
         [&, this]() {
@@ -472,7 +473,7 @@ void LaserMapping::StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::Cons
     mtx_buffer_.unlock();
 }
 
-void LaserMapping::LivoxPCLCallBack(const livox_ros_driver2::msg::CustomMsg::ConstPtr &msg) {
+void LaserMapping::LivoxPCLCallBack(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg) {
     mtx_buffer_.lock();
     Timer::Evaluate(
         [&, this]() {
@@ -507,9 +508,9 @@ void LaserMapping::LivoxPCLCallBack(const livox_ros_driver2::msg::CustomMsg::Con
     mtx_buffer_.unlock();
 }
 
-void LaserMapping::IMUCallBack(const sensor_msgs::msg::Imu::ConstPtr &msg_in) {
+void LaserMapping::IMUCallBack(const sensor_msgs::msg::Imu::ConstSharedPtr &msg_in) {
     publish_count_++;
-    sensor_msgs::msg::Imu::Ptr msg(new sensor_msgs::msg::Imu(*msg_in));
+    auto msg = std::make_shared<sensor_msgs::msg::Imu>(*msg_in);
 
     if (abs(timediff_lidar_wrt_imu_) > 0.1 && time_sync_en_) {
         msg->header.stamp = common::get_ros_time(timediff_lidar_wrt_imu_ + common::toSec(msg_in->header.stamp));
@@ -762,7 +763,7 @@ void LaserMapping::ObsModel(state_ikfom &s, esekfom::dyn_share_datastruct<double
 void LaserMapping::PublishPath(const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pub_path) {
     SetPosestamp(msg_body_pose_);
     msg_body_pose_.header.stamp = common::get_ros_time(lidar_end_time_);
-    msg_body_pose_.header.frame_id = "camera_init";
+    msg_body_pose_.header.frame_id = "odom";
 
     /*** if path is too large, the rvis will crash ***/
     path_.poses.push_back(msg_body_pose_);
@@ -772,7 +773,7 @@ void LaserMapping::PublishPath(const rclcpp::Publisher<nav_msgs::msg::Path>::Sha
 }
 
 void LaserMapping::PublishOdometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr &pub_odom_aft_mapped) {
-    odom_aft_mapped_.header.frame_id = "camera_init";
+    odom_aft_mapped_.header.frame_id = "odom";
     odom_aft_mapped_.child_frame_id = "body";
     odom_aft_mapped_.header.stamp = common::get_ros_time(lidar_end_time_);  //
     SetPosestamp(odom_aft_mapped_.pose);
@@ -789,7 +790,7 @@ void LaserMapping::PublishOdometry(const rclcpp::Publisher<nav_msgs::msg::Odomet
     }
 
     geometry_msgs::msg::TransformStamped trans;
-    trans.header.frame_id = "camera_init";
+    trans.header.frame_id = "odom";
     trans.child_frame_id = "body";
     trans.header.stamp = common::get_ros_time(lidar_end_time_);
     trans.transform.translation.x = odom_aft_mapped_.pose.pose.position.x;
@@ -813,7 +814,7 @@ void LaserMapping::PublishOdometry(const rclcpp::Publisher<nav_msgs::msg::Odomet
     rot_aligned.normalize();
 
     // ## 2. Populate the Odometry Message with the Aligned Pose ##
-    odom_aft_mapped_.header.frame_id = "camera_init";
+    odom_aft_mapped_.header.frame_id = "odom";
     odom_aft_mapped_.child_frame_id = "body";
     odom_aft_mapped_.header.stamp = common::get_ros_time(lidar_end_time_);
 
@@ -862,7 +863,7 @@ void LaserMapping::PublishOdometry(const rclcpp::Publisher<nav_msgs::msg::Odomet
 
     // ## 5. Publish the TF Transform (uses the already aligned pose) ##
     geometry_msgs::msg::TransformStamped trans;
-    trans.header.frame_id = "camera_init";
+    trans.header.frame_id = "odom";
     trans.child_frame_id = "body";
     trans.header.stamp = odom_aft_mapped_.header.stamp;
     trans.transform.translation.x = odom_aft_mapped_.pose.pose.position.x;
@@ -893,14 +894,14 @@ void LaserMapping::PublishFrameWorld() {
         sensor_msgs::msg::PointCloud2 laserCloudmsg;
         pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
         laserCloudmsg.header.stamp = common::get_ros_time(lidar_end_time_);
-        laserCloudmsg.header.frame_id = "camera_init";
+        laserCloudmsg.header.frame_id = "odom";
         pub_laser_cloud_world_->publish(laserCloudmsg);
         publish_count_ -= options::PUBFRAME_PERIOD;
     }
 
     /**************** save map ****************/
-    /* 1. make sure you have enough memories
-    /* 2. noted that pcd save will influence the real-time performences **/
+    // 1. make sure you have enough memories
+    // 2. noted that pcd save will influence the real-time performences
     if (pcd_save_en_) {
         *pcl_wait_save_ += *laserCloudWorld;
 
@@ -954,14 +955,14 @@ void LaserMapping::PublishFrameWorld(const Eigen::Quaterniond &rot_align) {  // 
         // 4. Use the aligned point cloud for publishing
         pcl::toROSMsg(*laserCloudAligned, laserCloudmsg);
         laserCloudmsg.header.stamp = common::get_ros_time(lidar_end_time_);
-        laserCloudmsg.header.frame_id = "camera_init";
+        laserCloudmsg.header.frame_id = "odom";
         pub_laser_cloud_world_->publish(laserCloudmsg);
         publish_count_ -= options::PUBFRAME_PERIOD;
     }
 
     /**************** save map ****************/
-    /* 1. make sure you have enough memories
-    /* 2. noted that pcd save will influence the real-time performences **/
+    // 1. make sure you have enough memories
+    // 2. noted that pcd save will influence the real-time performences
     if (pcd_save_en_) {
         // 5. Use the aligned point cloud for saving
         *pcl_wait_save_ += *laserCloudAligned;
@@ -1078,8 +1079,8 @@ void LaserMapping::PointBodyLidarToIMU(PointType const *const pi, PointType *con
 
 void LaserMapping::Finish() {
     /**************** save map ****************/
-    /* 1. make sure you have enough memories
-    /* 2. pcd save will largely influence the real-time performences **/
+    // 1. make sure you have enough memories
+    // 2. pcd save will largely influence the real-time performences
     if (pcl_wait_save_->size() > 0 && pcd_save_en_) {
         // Use configured path; absolute as-is, otherwise relative to ROOT_DIR
         std::string target = pcd_save_file_path_.empty() ? std::string("PCD/scans.pcd") : pcd_save_file_path_;

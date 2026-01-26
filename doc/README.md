@@ -11,6 +11,14 @@ tags:
 ---
 # 哨兵寄录
 
+## 260126 调试
+
+重构坐标系ID并优化初始化参数：
+- SLAM的坐标系ID"livox_frame"和"camera_init"更改为"body"和"odom"，确保系统一致性
+- 增加全局定位参数配置，新增初始位姿设置及多角度假设初始化选项，优化了定位
+- 将点云处理中的消息指针类型从ConstPtr调整为ConstSharedPtr，提升内存管理效率，支持ROS2
+- 修复了SLAM_and_localize backen:=faster_lio
+
 ## 260124 调试
 
 - 建图，重定位基础功能已经调完

@@ -50,18 +50,7 @@
 
 bfs脱困
 
-## 我的愿景
-
-做这个的最初目的是清理在ROS1框架下迭代出来的石山和低水平代码。
-构建一个足够简单、清晰和标准化的框架，以够用的水准(我的水平很难实现优秀的水准)完成RMUL和RMUC赛事，在自我学习的过程中推动robomaster比赛上位机导航算法的交流和发展。
-
 ## 配置环境
-
-### git submodule
-
-```bash
-git submodule update --init --recursive --depth 1
-```
 
 ### rosdep 
 
@@ -71,18 +60,13 @@ rosdep update
 rosdep install --from-paths src --ignore-src -r -y  
 ```
 
-### 编译
-
-重要！在任何时候编译的时候请务必使用--symlink-install！否则某些基于pathlib解析的相对路径和功能包路径会出现错误！到时候你就等着debug去吧😅
-
-
 ### 启动
 
 启动以下几个launch文件即可
 
 1. 启动雷达驱动,发布点云
 ```bash
-ros2 launch livox_ros_driver2 msg_MID360_launch.py # 
+ros2 launch livox_ros_driver2 msg_MID360_launch.py
 ```
 
 2. 启动里程计和定位
@@ -113,12 +97,12 @@ ros2 launch nav2_client_cpp nav2_stack_with_gvc.launch.py # 还需要改进
 ros2 launch nav2_client_cpp nav2_stack_with_gvc_sim.launch.py
 ```
 
-启动决策(还没测):
+5. 启动决策(还没测):
 ```bash
 ros2 launch rm_bt_decision bt.launch.py  
 ```
 
-5. 启动通信节点
+6. 启动通信节点
 
 ```bash
 ros2 launch rm_comm_ros2 rm_comm_bringup.launch.py

@@ -11,13 +11,13 @@ void PointCloudPreprocess::Set(LidarType lid_type, double bld, int pfilt_num) {
     point_filter_num_ = pfilt_num;
 }
 
-void PointCloudPreprocess::Process(const livox_ros_driver2::msg::CustomMsg::ConstPtr &msg,
+void PointCloudPreprocess::Process(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg,
                                    PointCloudType::Ptr &pcl_out) {
     AviaHandler(msg);
     *pcl_out = cloud_out_;
 }
 
-void PointCloudPreprocess::Process(const sensor_msgs::msg::PointCloud2::ConstPtr &msg, PointCloudType::Ptr &pcl_out) {
+void PointCloudPreprocess::Process(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg, PointCloudType::Ptr &pcl_out) {
     switch (lidar_type_) {
         case LidarType::OUST64:
             Oust64Handler(msg);
@@ -34,7 +34,7 @@ void PointCloudPreprocess::Process(const sensor_msgs::msg::PointCloud2::ConstPtr
     *pcl_out = cloud_out_;
 }
 
-void PointCloudPreprocess::AviaHandler(const livox_ros_driver2::msg::CustomMsg::ConstPtr &msg) {
+void PointCloudPreprocess::AviaHandler(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg) {
     cloud_out_.clear();
     cloud_full_.clear();
     int plsize = msg->point_num;
@@ -79,7 +79,7 @@ void PointCloudPreprocess::AviaHandler(const livox_ros_driver2::msg::CustomMsg::
     }
 }
 
-void PointCloudPreprocess::Oust64Handler(const sensor_msgs::msg::PointCloud2::ConstPtr &msg) {
+void PointCloudPreprocess::Oust64Handler(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
     cloud_out_.clear();
     cloud_full_.clear();
     pcl::PointCloud<ouster_ros::Point> pl_orig;
@@ -110,7 +110,7 @@ void PointCloudPreprocess::Oust64Handler(const sensor_msgs::msg::PointCloud2::Co
     }
 }
 
-void PointCloudPreprocess::VelodyneHandler(const sensor_msgs::msg::PointCloud2::ConstPtr &msg) {
+void PointCloudPreprocess::VelodyneHandler(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
     cloud_out_.clear();
     cloud_full_.clear();
 

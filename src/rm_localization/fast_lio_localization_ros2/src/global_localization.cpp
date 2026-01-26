@@ -6,6 +6,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <limits>
 
 #include <Eigen/Dense>
 
@@ -38,11 +39,25 @@ public:
 		this->declare_parameter<double>("scan_voxel_size", 0.1);
 		this->declare_parameter<double>("fov", 6.28);
 		this->declare_parameter<double>("fov_far", 30.0);
-		this->declare_parameter<std::string>("map_frame", "map3d");
-		this->declare_parameter<std::string>("odom_frame", "camera_init");
+		this->declare_parameter<std::string>("map_frame", "map");
+		this->declare_parameter<std::string>("odom_frame", "odom");
 		this->declare_parameter<std::string>("base_link_frame", "base_link");
 		// Keep param for compatibility; not used
 		this->declare_parameter<bool>("use_gicp", false);
+		
+		// Initial pose parameters for global initialization
+		this->declare_parameter<double>("initial_x", 0.0);
+		this->declare_parameter<double>("initial_y", 0.0);
+		this->declare_parameter<double>("initial_z", 0.0);
+		this->declare_parameter<double>("initial_yaw", 0.0);  // in radians
+		this->declare_parameter<bool>("use_initial_pose", false);  // enable initial pose
+		
+		// Multi-hypothesis and global search initialization
+		this->declare_parameter<bool>("enable_multi_hypothesis", true);  // try multiple initial poses
+		this->declare_parameter<int>("max_init_attempts", 10);  // max attempts before giving up
+		this->declare_parameter<bool>("enable_global_search", true);   // enable global grid search
+		this->declare_parameter<double>("global_search_step", 2.0);    // grid step in meters
+		this->declare_parameter<int>("global_search_yaw_steps", 8);    // number of yaw angles to try
 
 		// QoS
 		rclcpp::QoS qos_reliable(10);
@@ -244,7 +259,7 @@ private:
 		auto gm = global_map_;
 		if (!gm || !cur_scan_ || !cur_odom_) return false;
 
-		RCLCPP_INFO(this->get_logger(), "Global localization by scan-to-map matching ...");
+		RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Global localization by scan-to-map matching ...");
 		auto submap = cropGlobalMapInFOV(gm, pose_estimation, *cur_odom_);
 
 		auto [T1, mse1] = registrationAtScale(cur_scan_, submap, pose_estimation, 5.0);
@@ -275,12 +290,241 @@ private:
 			map_to_odom.header.stamp = cur_odom_->header.stamp;
 			map_to_odom.header.frame_id = this->get_parameter("map_frame").as_string();
 			pub_map_to_odom_->publish(map_to_odom);
-			RCLCPP_INFO(this->get_logger(), "relocalization mse: %.6f (mse_th=%.6f)", mse, mse_th);
+			RCLCPP_INFO(this->get_logger(), "Relocalization mse: %.6f (mse_th=%.6f)", mse, mse_th);
 			return true;
 		} else {
 			RCLCPP_WARN(this->get_logger(), "Not match (mse=%.6f, mse_th=%.6f)", mse, mse_th);
 			return false;
 		}
+	}
+
+	// Generate initial pose from parameters
+	Eigen::Matrix4d getInitialPoseFromParams() {
+		double x = this->get_parameter("initial_x").as_double();
+		double y = this->get_parameter("initial_y").as_double();
+		double z = this->get_parameter("initial_z").as_double();
+		double yaw = this->get_parameter("initial_yaw").as_double();
+		
+		Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+		T(0,3) = x;
+		T(1,3) = y;
+		T(2,3) = z;
+		T(0,0) = std::cos(yaw);
+		T(0,1) = -std::sin(yaw);
+		T(1,0) = std::sin(yaw);
+		T(1,1) = std::cos(yaw);
+		return T;
+	}
+
+	// Compute map bounding box from global map
+	void computeMapBounds(double& min_x, double& max_x, double& min_y, double& max_y, double& avg_z) {
+		min_x = std::numeric_limits<double>::max();
+		max_x = std::numeric_limits<double>::lowest();
+		min_y = std::numeric_limits<double>::max();
+		max_y = std::numeric_limits<double>::lowest();
+		double sum_z = 0.0;
+		int count = 0;
+		
+		for (const auto& pt : global_map_->points) {
+			if (!std::isfinite(pt.x) || !std::isfinite(pt.y) || !std::isfinite(pt.z)) continue;
+			min_x = std::min(min_x, static_cast<double>(pt.x));
+			max_x = std::max(max_x, static_cast<double>(pt.x));
+			min_y = std::min(min_y, static_cast<double>(pt.y));
+			max_y = std::max(max_y, static_cast<double>(pt.y));
+			sum_z += pt.z;
+			count++;
+		}
+		avg_z = (count > 0) ? (sum_z / count) : 0.0;
+	}
+
+	// Global grid search: search entire map for best matching position
+	bool tryGlobalGridSearch() {
+		if (!cur_scan_ || !cur_odom_ || !global_map_) return false;
+		
+		double grid_step = this->get_parameter("global_search_step").as_double();
+		int num_yaw = this->get_parameter("global_search_yaw_steps").as_int();
+		double mse_th = std::max(1e-6, this->get_parameter("localization_th").as_double());
+		
+		// Compute map bounds
+		double min_x, max_x, min_y, max_y, avg_z;
+		computeMapBounds(min_x, max_x, min_y, max_y, avg_z);
+		
+		// Add margin
+		double margin = 1.0;
+		min_x += margin; max_x -= margin;
+		min_y += margin; max_y -= margin;
+		
+		int nx = static_cast<int>(std::ceil((max_x - min_x) / grid_step)) + 1;
+		int ny = static_cast<int>(std::ceil((max_y - min_y) / grid_step)) + 1;
+		int total = nx * ny * num_yaw;
+		
+		RCLCPP_INFO(this->get_logger(), "=== GLOBAL GRID SEARCH ===");
+		RCLCPP_INFO(this->get_logger(), "Map bounds: x=[%.1f, %.1f], y=[%.1f, %.1f]", min_x, max_x, min_y, max_y);
+		RCLCPP_INFO(this->get_logger(), "Grid: %dx%d positions, %d yaw angles, total %d candidates", nx, ny, num_yaw, total);
+		
+		double best_mse = std::numeric_limits<double>::max();
+		Eigen::Matrix4d best_T = Eigen::Matrix4d::Identity();
+		double best_x = 0, best_y = 0, best_yaw = 0;
+		int tested = 0;
+		
+		// Coarse grid search
+		for (int ix = 0; ix < nx && alive_.load(); ++ix) {
+			double x = min_x + ix * grid_step;
+			for (int iy = 0; iy < ny && alive_.load(); ++iy) {
+				double y = min_y + iy * grid_step;
+				
+				for (int iyaw = 0; iyaw < num_yaw; ++iyaw) {
+					double yaw = iyaw * 2.0 * M_PI / num_yaw;
+					
+					Eigen::Matrix4d T_init = Eigen::Matrix4d::Identity();
+					T_init(0,3) = x;
+					T_init(1,3) = y;
+					T_init(2,3) = avg_z;
+					T_init(0,0) = std::cos(yaw);
+					T_init(0,1) = -std::sin(yaw);
+					T_init(1,0) = std::sin(yaw);
+					T_init(1,1) = std::cos(yaw);
+					
+					auto submap = cropGlobalMapInFOV(global_map_, T_init, *cur_odom_);
+					if (submap->size() < 100) continue;
+					
+					auto [T1, mse1] = registrationAtScale(cur_scan_, submap, T_init, 5.0);
+					
+					tested++;
+					if (mse1 < best_mse) {
+						best_mse = mse1;
+						best_T = T1;
+						best_x = x; best_y = y; best_yaw = yaw;
+					}
+				}
+			}
+			
+			if ((ix + 1) % 5 == 0 || ix == nx - 1) {
+				RCLCPP_INFO(this->get_logger(), "  Progress: %d/%d rows, tested %d, best_mse=%.6f at (%.1f, %.1f, %.0f deg)",
+					ix + 1, nx, tested, best_mse, best_x, best_y, best_yaw * 180.0 / M_PI);
+			}
+		}
+		
+		// Refine the best candidate
+		if (best_mse < mse_th * 5.0) {
+			RCLCPP_INFO(this->get_logger(), "Coarse search found candidate. Refining...");
+			
+			double fine_step = grid_step / 4.0;
+			for (double dx = -grid_step; dx <= grid_step; dx += fine_step) {
+				for (double dy = -grid_step; dy <= grid_step; dy += fine_step) {
+					for (int iyaw = 0; iyaw < num_yaw * 2; ++iyaw) {
+						double yaw = best_yaw + (iyaw - num_yaw) * M_PI / (num_yaw * 4);
+						
+						Eigen::Matrix4d T_init = Eigen::Matrix4d::Identity();
+						T_init(0,3) = best_x + dx;
+						T_init(1,3) = best_y + dy;
+						T_init(2,3) = avg_z;
+						T_init(0,0) = std::cos(yaw);
+						T_init(0,1) = -std::sin(yaw);
+						T_init(1,0) = std::sin(yaw);
+						T_init(1,1) = std::cos(yaw);
+						
+						auto submap = cropGlobalMapInFOV(global_map_, T_init, *cur_odom_);
+						if (submap->size() < 100) continue;
+						
+						auto [T1, mse1] = registrationAtScale(cur_scan_, submap, T_init, 3.0);
+						auto [T2, mse2] = registrationAtScale(cur_scan_, submap, T1, 1.0);
+						
+						if (mse2 < best_mse) {
+							best_mse = mse2;
+							best_T = T2;
+						}
+					}
+				}
+			}
+		}
+		
+		RCLCPP_INFO(this->get_logger(), "=== GLOBAL SEARCH RESULT: mse=%.6f (threshold=%.6f) ===", best_mse, mse_th);
+		
+		if (best_mse < mse_th) {
+			T_map_to_odom_ = best_T;
+			RCLCPP_INFO(this->get_logger(), "GLOBAL INIT SUCCESS!");
+			
+			nav_msgs::msg::Odometry map_to_odom;
+			Eigen::Quaterniond q(best_T.block<3,3>(0,0)); q.normalize();
+			map_to_odom.pose.pose.position.x = best_T(0,3);
+			map_to_odom.pose.pose.position.y = best_T(1,3);
+			map_to_odom.pose.pose.position.z = best_T(2,3);
+			map_to_odom.pose.pose.orientation.x = q.x();
+			map_to_odom.pose.pose.orientation.y = q.y();
+			map_to_odom.pose.pose.orientation.z = q.z();
+			map_to_odom.pose.pose.orientation.w = q.w();
+			map_to_odom.header.stamp = cur_odom_->header.stamp;
+			map_to_odom.header.frame_id = this->get_parameter("map_frame").as_string();
+			pub_map_to_odom_->publish(map_to_odom);
+			return true;
+		}
+		
+		RCLCPP_WARN(this->get_logger(), "GLOBAL INIT FAILED, best_mse=%.6f > threshold=%.6f", best_mse, mse_th);
+		return false;
+	}
+
+	// Multi-hypothesis initialization: try different yaw angles at current position
+	bool tryMultiHypothesisInit() {
+		if (!cur_scan_ || !cur_odom_ || !global_map_) return false;
+		
+		double best_mse = std::numeric_limits<double>::max();
+		Eigen::Matrix4d best_T = Eigen::Matrix4d::Identity();
+		
+		double init_x = this->get_parameter("initial_x").as_double();
+		double init_y = this->get_parameter("initial_y").as_double();
+		double init_z = this->get_parameter("initial_z").as_double();
+		
+		RCLCPP_INFO(this->get_logger(), "Multi-hypothesis init: trying 8 yaw angles at (%.2f, %.2f, %.2f)", init_x, init_y, init_z);
+		
+		for (int i = 0; i < 8; ++i) {
+			double yaw = i * M_PI / 4.0;
+			
+			Eigen::Matrix4d T_init = Eigen::Matrix4d::Identity();
+			T_init(0,3) = init_x;
+			T_init(1,3) = init_y;
+			T_init(2,3) = init_z;
+			T_init(0,0) = std::cos(yaw);
+			T_init(0,1) = -std::sin(yaw);
+			T_init(1,0) = std::sin(yaw);
+			T_init(1,1) = std::cos(yaw);
+			
+			auto submap = cropGlobalMapInFOV(global_map_, T_init, *cur_odom_);
+			if (submap->empty()) continue;
+			
+			auto [T1, mse1] = registrationAtScale(cur_scan_, submap, T_init, 5.0);
+			auto [T2, mse2] = registrationAtScale(cur_scan_, submap, T1, 1.0);
+			
+			RCLCPP_INFO(this->get_logger(), "  yaw=%.0f deg, mse=%.6f", yaw * 180.0 / M_PI, mse2);
+			
+			if (mse2 < best_mse) {
+				best_mse = mse2;
+				best_T = T2;
+			}
+		}
+		
+		double mse_th = std::max(1e-6, this->get_parameter("localization_th").as_double());
+		if (best_mse < mse_th) {
+			T_map_to_odom_ = best_T;
+			RCLCPP_INFO(this->get_logger(), "Multi-hypothesis init SUCCESS! best_mse=%.6f", best_mse);
+			
+			nav_msgs::msg::Odometry map_to_odom;
+			Eigen::Quaterniond q(best_T.block<3,3>(0,0)); q.normalize();
+			map_to_odom.pose.pose.position.x = best_T(0,3);
+			map_to_odom.pose.pose.position.y = best_T(1,3);
+			map_to_odom.pose.pose.position.z = best_T(2,3);
+			map_to_odom.pose.pose.orientation.x = q.x();
+			map_to_odom.pose.pose.orientation.y = q.y();
+			map_to_odom.pose.pose.orientation.z = q.z();
+			map_to_odom.pose.pose.orientation.w = q.w();
+			map_to_odom.header.stamp = cur_odom_->header.stamp;
+			map_to_odom.header.frame_id = this->get_parameter("map_frame").as_string();
+			pub_map_to_odom_->publish(map_to_odom);
+			return true;
+		}
+		
+		RCLCPP_WARN(this->get_logger(), "Multi-hypothesis init FAILED, best_mse=%.6f > th=%.6f", best_mse, mse_th);
+		return false;
 	}
 
 	void initializeAndRun() {
@@ -289,24 +533,74 @@ private:
 			rclcpp::sleep_for(std::chrono::milliseconds(500));
 		}
 
-		publishInitialPose();
-		while (alive_.load() && rclcpp::ok()) {
-			if (!cur_scan_) {
-				RCLCPP_WARN(this->get_logger(), "First scan not received!");
-				rclcpp::sleep_for(std::chrono::seconds(1));
-				continue;
-			}
-			if (!cur_odom_) {
-				RCLCPP_WARN(this->get_logger(), "Waiting for odom ...");
-				rclcpp::sleep_for(std::chrono::seconds(1));
-				continue;
-			}
-			bool ok = globalLocalization(T_map_to_odom_);
-			if (ok) break;
+		// Wait for first scan and odom
+		while (alive_.load() && rclcpp::ok() && (!cur_scan_ || !cur_odom_)) {
+			if (!cur_scan_) RCLCPP_WARN(this->get_logger(), "Waiting for first scan ...");
+			if (!cur_odom_) RCLCPP_WARN(this->get_logger(), "Waiting for odom ...");
 			rclcpp::sleep_for(std::chrono::seconds(1));
 		}
 
-		RCLCPP_INFO(this->get_logger(), "Initialize successfully!");
+		// Check parameters
+		bool use_initial_pose = this->get_parameter("use_initial_pose").as_bool();
+		bool enable_multi_hypothesis = this->get_parameter("enable_multi_hypothesis").as_bool();
+		bool enable_global_search = this->get_parameter("enable_global_search").as_bool();
+		int max_attempts = this->get_parameter("max_init_attempts").as_int();
+		
+		if (use_initial_pose) {
+			T_map_to_odom_ = getInitialPoseFromParams();
+			RCLCPP_INFO(this->get_logger(), "Using initial pose from parameters: x=%.2f, y=%.2f, yaw=%.2f",
+				this->get_parameter("initial_x").as_double(),
+				this->get_parameter("initial_y").as_double(),
+				this->get_parameter("initial_yaw").as_double());
+		}
+
+		publishInitialPose();
+		
+		// Initialization phase
+		int attempt = 0;
+		bool initialized = false;
+		while (alive_.load() && rclcpp::ok() && !initialized) {
+			attempt++;
+			
+			// First try direct matching
+			bool ok = globalLocalization(T_map_to_odom_);
+			if (ok) {
+				initialized = true;
+				break;
+			}
+			
+			// If direct matching fails, try multi-hypothesis
+			if (enable_multi_hypothesis && attempt == 1) {
+				RCLCPP_INFO(this->get_logger(), "Direct matching failed, trying multi-hypothesis init...");
+				if (tryMultiHypothesisInit()) {
+					initialized = true;
+					break;
+				}
+			}
+			
+			// If still failed, do full map search
+			if (enable_global_search && attempt == 2) {
+				RCLCPP_INFO(this->get_logger(), "Multi-hypothesis failed, starting GLOBAL GRID SEARCH...");
+				if (tryGlobalGridSearch()) {
+					initialized = true;
+					break;
+				}
+			}
+			
+			if (attempt >= max_attempts) {
+				RCLCPP_ERROR(this->get_logger(), "Initialization failed after %d attempts!", attempt);
+				RCLCPP_ERROR(this->get_logger(), "Use RViz '2D Pose Estimate' on /initialpose_rviz");
+			}
+			
+			rclcpp::sleep_for(std::chrono::seconds(2));
+		}
+
+		if (initialized) {
+			RCLCPP_INFO(this->get_logger(), "Initialize successfully!");
+		} else {
+			RCLCPP_WARN(this->get_logger(), "Waiting for manual pose...");
+		}
+		
 		double freq = this->get_parameter("freq_localization").as_double();
 		double period = (freq > 0.0) ? (1.0 / freq) : 2.0;
 		auto sleep_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(

@@ -86,13 +86,26 @@ def generate_launch_description():
     )
 
     # Tunable parameters for global localization
-    freq_localization_arg = DeclareLaunchArgument("freq_localization", default_value="1.0") # 重定位频率
-    localization_th_arg = DeclareLaunchArgument("localization_th", default_value="0.08")    # MSE匹配阈值
+    freq_localization_arg = DeclareLaunchArgument("freq_localization", default_value="2.0") # 重定位频率
+    localization_th_arg = DeclareLaunchArgument("localization_th", default_value="0.03")    # MSE匹配阈值
     map_voxel_size_arg = DeclareLaunchArgument("map_voxel_size", default_value="0.05")      # 地图降采样体素大小
     scan_voxel_size_arg = DeclareLaunchArgument("scan_voxel_size", default_value="0.05")    # 扫描降采样体素大小
     fov_arg = DeclareLaunchArgument("fov", default_value="6.28")                            # 视场角（保持360度）
     fov_far_arg = DeclareLaunchArgument("fov_far", default_value="30.0")                    # 远距离视场范围
     use_gicp_arg = DeclareLaunchArgument("use_gicp", default_value="true")                  # 是否使用GICP算法
+    
+    # Initial pose parameters
+    initial_x_arg = DeclareLaunchArgument("initial_x", default_value="0.0")                 # 初始X位置
+    initial_y_arg = DeclareLaunchArgument("initial_y", default_value="0.0")                 # 初始Y位置
+    initial_z_arg = DeclareLaunchArgument("initial_z", default_value="0.0")                 # 初始Z位置
+    initial_yaw_arg = DeclareLaunchArgument("initial_yaw", default_value="0.0")             # 初始航向角(弧度)
+    use_initial_pose_arg = DeclareLaunchArgument("use_initial_pose", default_value="false") # 是否使用初始位姿
+    enable_multi_hypothesis_arg = DeclareLaunchArgument("enable_multi_hypothesis", default_value="true")  # 多假设初始化
+    
+    # Global grid search parameters (全局搜索，无需设置初始位置)
+    enable_global_search_arg = DeclareLaunchArgument("enable_global_search", default_value="true")  # 全局网格搜索
+    global_search_step_arg = DeclareLaunchArgument("global_search_step", default_value="2.0")       # 搜索步长(米)
+    global_search_yaw_steps_arg = DeclareLaunchArgument("global_search_yaw_steps", default_value="8")  # 航向角搜索数量
 
     # Configurations
     backend = LaunchConfiguration("backend")
@@ -123,6 +136,7 @@ def generate_launch_description():
         name="fastlio_mapping",
         output="screen",
         parameters=[fast_lio_params, common_params],
+        remappings=[("/Odometry", "/odom")],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'fast_lio'"])),
         # Fix libusb conflict with MVS SDK - prioritize system libusb
         additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
@@ -145,8 +159,8 @@ def generate_launch_description():
         executable="pointlio_mapping",
         name="pointlio_mapping",
         output="screen",
-        remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
         parameters=[point_lio_ros2_params, common_params],
+        remappings=[("/tf", "tf"), ("/tf_static", "tf_static"), ("/Odometry", "/odom")],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'point_lio'"])),
         # Fix libusb conflict with MVS SDK - prioritize system libusb
         additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
@@ -161,7 +175,7 @@ def generate_launch_description():
         parameters=[
             {
                 "map": LaunchConfiguration("map"),
-                "frame_id": "map3d",
+                "frame_id": "map",
                 "rate": 1.0,
                 "use_sim_time": use_sim_time,
             }
@@ -180,8 +194,8 @@ def generate_launch_description():
                 "map2odom_completed": False,
                 "region": 0,
                 "use_sim_time": use_sim_time,
-                "map_frame": "map3d",
-                "odom_frame": "camera_init",
+                "map_frame": "map",
+                "odom_frame": "odom",
                 "base_link_frame": "base_link",
                 "freq_localization": LaunchConfiguration("freq_localization"),
                 "localization_th": LaunchConfiguration("localization_th"),
@@ -190,6 +204,17 @@ def generate_launch_description():
                 "fov": LaunchConfiguration("fov"),
                 "fov_far": LaunchConfiguration("fov_far"),
                 "use_gicp": LaunchConfiguration("use_gicp"),
+                # Initial pose parameters
+                "initial_x": LaunchConfiguration("initial_x"),
+                "initial_y": LaunchConfiguration("initial_y"),
+                "initial_z": LaunchConfiguration("initial_z"),
+                "initial_yaw": LaunchConfiguration("initial_yaw"),
+                "use_initial_pose": LaunchConfiguration("use_initial_pose"),
+                "enable_multi_hypothesis": LaunchConfiguration("enable_multi_hypothesis"),
+                # Global grid search parameters
+                "enable_global_search": LaunchConfiguration("enable_global_search"),
+                "global_search_step": LaunchConfiguration("global_search_step"),
+                "global_search_yaw_steps": LaunchConfiguration("global_search_yaw_steps"),
             }
         ],
         condition=IfCondition(run_global),
@@ -204,8 +229,8 @@ def generate_launch_description():
         parameters=[
             {
                 "use_sim_time": use_sim_time,
-                "map_frame": "map3d",
-                "odom_frame": "camera_init",
+                "map_frame": "map",
+                "odom_frame": "odom",
                 "base_link_frame": "base_link",
             }
         ],
@@ -278,6 +303,18 @@ def generate_launch_description():
             pcd_save_en_arg,
             pcd_save_interval_arg,
             pcd_save_file_arg,
+            # Initial pose arguments
+            initial_x_arg,
+            initial_y_arg,
+            initial_z_arg,
+            initial_yaw_arg,
+            use_initial_pose_arg,
+            enable_multi_hypothesis_arg,
+            # Global search arguments
+            enable_global_search_arg,
+            global_search_step_arg,
+            global_search_yaw_steps_arg,
+            # Nodes
             fast_lio_node,
             faster_lio_node,
             point_lio_ros2_node,

@@ -158,7 +158,7 @@ void publish_init_map(
   pcl::toROSMsg(*init_feats_world, laserCloudmsg);
 
   laserCloudmsg.header.stamp    = get_ros_time(lidar_end_time);
-  laserCloudmsg.header.frame_id = "camera_init";
+  laserCloudmsg.header.frame_id = "odom";
   pubLaserCloudFullRes->publish(laserCloudmsg);
 }
 
@@ -173,7 +173,7 @@ void                publish_frame_world(
     pcl::toROSMsg(*feats_down_world, laserCloudmsg);
 
     laserCloudmsg.header.stamp    = get_ros_time(lidar_end_time);
-    laserCloudmsg.header.frame_id = "camera_init";
+    laserCloudmsg.header.frame_id = "odom";
     pubLaserCloudFullRes->publish(laserCloudmsg);
 
     // Also publish a dense (full-resolution, unfiltered) world-frame cloud
@@ -305,7 +305,7 @@ int main(int argc, char** argv) {
   ivox_ = std::make_shared<IVoxType>(ivox_options_);
 
   path.header.stamp    = get_ros_time(lidar_end_time);
-  path.header.frame_id = "camera_init";
+  path.header.frame_id = "odom";
 
   /*** variables definition for counting ***/
   int    frame_num       = 0;

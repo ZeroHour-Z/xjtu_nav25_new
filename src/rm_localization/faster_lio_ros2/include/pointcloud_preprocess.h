@@ -69,8 +69,8 @@ class PointCloudPreprocess {
     ~PointCloudPreprocess() = default;
 
     /// processors
-    void Process(const livox_ros_driver2::msg::CustomMsg::ConstPtr &msg, PointCloudType::Ptr &pcl_out);
-    void Process(const sensor_msgs::msg::PointCloud2::ConstPtr &msg, PointCloudType::Ptr &pcl_out);
+    void Process(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg, PointCloudType::Ptr &pcl_out);
+    void Process(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg, PointCloudType::Ptr &pcl_out);
     void Set(LidarType lid_type, double bld, int pfilt_num);
 
     // accessors
@@ -83,9 +83,9 @@ class PointCloudPreprocess {
     void SetLidarType(LidarType lt) { lidar_type_ = lt; }
 
    private:
-    void AviaHandler(const livox_ros_driver2::msg::CustomMsg::ConstPtr &msg);
-    void Oust64Handler(const sensor_msgs::msg::PointCloud2::ConstPtr &msg);
-    void VelodyneHandler(const sensor_msgs::msg::PointCloud2::ConstPtr &msg);
+    void AviaHandler(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg);
+    void Oust64Handler(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
+    void VelodyneHandler(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
 
     PointCloudType cloud_full_, cloud_out_;
 

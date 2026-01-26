@@ -22,7 +22,7 @@ namespace faster_lio {
 
 class LaserMapping : public rclcpp::Node {
    public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 #ifdef IVOX_NODE_TYPE_PHC
     using IVoxType = IVox<3, IVoxNodeType::PHC, PointType>;
@@ -47,9 +47,9 @@ class LaserMapping : public rclcpp::Node {
     void Run();
 
     // callbacks of lidar and imu
-    void StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::ConstPtr &msg);
-    void LivoxPCLCallBack(const livox_ros_driver2::msg::CustomMsg::ConstPtr &msg);
-    void IMUCallBack(const sensor_msgs::msg::Imu::ConstPtr &msg_in);
+    void StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
+    void LivoxPCLCallBack(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg);
+    void IMUCallBack(const sensor_msgs::msg::Imu::ConstSharedPtr &msg_in);
 
     // sync lidar with imu
     bool SyncPackages();
@@ -140,7 +140,7 @@ class LaserMapping : public rclcpp::Node {
     std::mutex mtx_buffer_;
     std::deque<double> time_buffer_;
     std::deque<PointCloudType::Ptr> lidar_buffer_;
-    std::deque<sensor_msgs::msg::Imu::ConstPtr> imu_buffer_;
+    std::deque<sensor_msgs::msg::Imu::ConstSharedPtr> imu_buffer_;
     nav_msgs::msg::Odometry odom_aft_mapped_;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 

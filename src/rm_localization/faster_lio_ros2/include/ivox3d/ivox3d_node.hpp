@@ -39,7 +39,7 @@ inline Eigen::Matrix<float, 3, 1> ToEigen<float, 3, pcl::PointXYZINormal>(const 
 template <typename PointT, int dim = 3>
 class IVoxNode {
    public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     struct DistPoint;
 
@@ -64,7 +64,7 @@ class IVoxNode {
 template <typename PointT, int dim = 3>
 class IVoxNodePhc {
    public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     struct DistPoint;
     struct PhcCube;

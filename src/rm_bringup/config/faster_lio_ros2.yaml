@@ -29,6 +29,8 @@
       scan_effect_pub_en: false
       dense_publish_en: true
       scan_bodyframe_pub_en: true
+      tf_world_frame: "odom"
+      tf_imu_frame: "body"
 
     path_save_en: false
 

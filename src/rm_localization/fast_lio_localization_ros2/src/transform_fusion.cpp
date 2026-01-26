@@ -16,8 +16,8 @@ class TransformFusionNode : public rclcpp::Node {
 public:
 	TransformFusionNode() : rclcpp::Node("transform_fusion") {
 		this->declare_parameter<double>("publish_rate", 100.0);
-		this->declare_parameter<std::string>("map_frame", "map3d");
-		this->declare_parameter<std::string>("odom_frame", "camera_init");
+		this->declare_parameter<std::string>("map_frame", "map");
+		this->declare_parameter<std::string>("odom_frame", "odom");
 		this->declare_parameter<std::string>("base_link_frame", "base_link");
 
 		pub_localization_ = this->create_publisher<nav_msgs::msg::Odometry>("/localization", 10);
