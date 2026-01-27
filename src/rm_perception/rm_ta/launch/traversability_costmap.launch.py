@@ -6,6 +6,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     input_topic = LaunchConfiguration('input_topic')
+    gravity_frame = LaunchConfiguration('gravity_frame')
     frame_id = LaunchConfiguration('frame_id')
     resolution = LaunchConfiguration('resolution')
     width_m = LaunchConfiguration('width_m')
@@ -18,7 +19,8 @@ def generate_launch_description():
     step_threshold_m = LaunchConfiguration('step_threshold_m')
 
     return LaunchDescription([
-        DeclareLaunchArgument('input_topic', default_value='/livox/points'),
+        DeclareLaunchArgument('input_topic', default_value='/cloud_registered_body'),
+        DeclareLaunchArgument('gravity_frame', default_value='odom'),
         DeclareLaunchArgument('frame_id', default_value='map'),
         DeclareLaunchArgument('resolution', default_value='0.05'),
         DeclareLaunchArgument('width_m', default_value='20.0'),
@@ -39,6 +41,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'input_topic': input_topic,
+                'gravity_frame': gravity_frame,
                 'frame_id': frame_id,
                 'resolution': resolution,
                 'width_m': width_m,
