@@ -58,7 +58,7 @@
         publish:
             path_en: True
             scan_publish_en: True
-            scan_bodyframe_pub_en: False
+            scan_bodyframe_pub_en: True
             tf_send_en: True
 
         pcd_save:

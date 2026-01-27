@@ -20,7 +20,7 @@ tags:
 - 将点云处理中的消息指针类型从ConstPtr调整为ConstSharedPtr，提升内存管理效率，支持ROS2
 - 更改部分宏定义之后加分号的会引起警告的写法（宏本身展开自带分号）
 - 更改部分注释号使用不规范的问题
-- 修复了SLAM_and_localize backen:=faster_lio|fast_lio
+- 修复了SLAM_and_localize backen:=faster_lio|fast_lio|point_lio
 
 ## 260124 调试
 

@@ -68,7 +68,7 @@ def generate_launch_description():
             [
                 FindPackageShare("rm_bringup"),
                 "config",
-                "point_lio_ros2_mid360.yaml",
+                "point_lio_mid360.yaml",
             ]
         ),
         description="YAML for point_lio_ros2 node",
@@ -271,6 +271,30 @@ def generate_launch_description():
         condition=IfCondition(run_global),
     )
 
+    # Static TF for point_lio compatibility: odom -> camera_init (identity)
+    # point_lio uses camera_init as fixed frame, we alias it to odom
+    tf_odom2camera_init = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="tf_odom2camera_init",
+        arguments=["0", "0", "0", "0", "0", "0", "odom", "camera_init"],
+        condition=IfCondition(
+            PythonExpression(["'", backend, "' == 'point_lio'"])
+        ),
+    )
+
+    # Static TF for point_lio compatibility: aft_mapped -> body (identity)
+    # point_lio publishes camera_init -> aft_mapped, we need aft_mapped = body
+    tf_aft_mapped2body = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="tf_aft_mapped2body",
+        arguments=["0", "0", "0", "0", "0", "0", "aft_mapped", "body"],
+        condition=IfCondition(
+            PythonExpression(["'", backend, "' == 'point_lio'"])
+        ),
+    )
+
     # RViz
     rviz_config_path = os.path.join(
         get_package_share_directory("rm_bringup"), "rviz", "localize.rviz"
@@ -324,6 +348,8 @@ def generate_launch_description():
             tf_body2base,
             tf_map3dto2d,
             tf_base_link2realsense,
+            tf_odom2camera_init,
+            tf_aft_mapped2body,
             GroupAction(
                 [rviz_node], condition=IfCondition(LaunchConfiguration("rviz"))
             ),
