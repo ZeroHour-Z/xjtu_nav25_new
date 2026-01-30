@@ -9,18 +9,18 @@ global_velocity_controller:
     global_costmap_topic: "/global_costmap/costmap"
 
     # PID gains
-    kp_xy: 1.5
+    kp_xy: 1.0  # 提高P增益，更激进地追踪路径
     ki_xy: 0.0
-    kd_xy: 0.5
+    kd_xy: 0.0  # 降低D增益，减少抖动
 
-    kp_yaw: 0.0
+    kp_yaw: 0.0  # 陀螺模式下不控制航向
     ki_yaw: 0.0
     kd_yaw: 0.0
 
     # Limits
-    max_vx: 3.0
-    max_vy: 3.0
-    max_wz: 0.0
+    max_vx: 1.0
+    max_vy: 1.0
+    max_wz: 1.0  # 提高到5.0，不限制陀螺角速度
 
     anti_windup_integral_limit_xy: 0.5
     anti_windup_integral_limit_yaw: 0.5

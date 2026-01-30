@@ -5,8 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Mapping1
-        - /Segment1/Obstacle1
-        - /Segment1/Ground1
       Splitter Ratio: 0.5
     Tree Height: 631
   - Class: rviz_common/Selection
@@ -99,7 +97,7 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
-          Max Intensity: 91
+          Max Intensity: 142
           Min Color: 0; 0; 0
           Min Intensity: 0
           Name: Accumulate
@@ -167,7 +165,7 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
-          Max Intensity: 95
+          Max Intensity: 142
           Min Color: 0; 0; 0
           Min Intensity: 0
           Name: CloudBody
@@ -193,14 +191,10 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        aft_mapped:
-          Value: false
         base_link:
           Value: true
         body:
           Value: true
-        camera_init:
-          Value: false
         camera_link:
           Value: false
         map:
@@ -218,12 +212,10 @@ Visualization Manager:
         map:
           map3d:
             odom:
-              camera_init:
-                aft_mapped:
-                  body:
-                    base_link:
-                      camera_link:
-                        {}
+              body:
+                base_link:
+                  camera_link:
+                    {}
       Update Interval: 0
       Value: true
     - Class: rviz_common/Group
@@ -412,7 +404,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 2.839708089828491
+      Distance: 7.2281928062438965
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -427,10 +419,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.31479763984680176
+      Pitch: 0.5747969150543213
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.3322348594665527
+      Yaw: 2.822262763977051
     Saved: ~
 Window Geometry:
   Displays:

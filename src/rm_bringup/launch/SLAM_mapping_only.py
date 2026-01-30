@@ -18,17 +18,15 @@ from pathlib import Path
 
 
 def generate_launch_description():
-    # Arguments
     backend_arg = DeclareLaunchArgument(
         "backend",
         default_value="point_lio",
-        description="fast_lio | faster_lio | point_lio",
+        description="Backend: fast_lio | faster_lio | point_lio",
     )
     rviz_arg = DeclareLaunchArgument("rviz", default_value="true")
     use_sim_time_arg = DeclareLaunchArgument("use_sim_time", default_value="true")
 
-    # No rosbag playback here; run rosbag externally if needed
-
+    # 这里没有rosbag播放；如果需要，请外部运行rosbag
     record_rosbag_arg = DeclareLaunchArgument(
         "record_rosbag",
         default_value="false",
@@ -40,33 +38,22 @@ def generate_launch_description():
         description="Output prefix/path for rosbag record",
     )
 
-    pcd_save_en_arg = DeclareLaunchArgument(
-        "pcd_save_en", default_value="True", description="Override pcd_save.pcd_save_en"
-    )
-    pcd_save_interval_arg = DeclareLaunchArgument(
-        "pcd_save_interval",
-        default_value="-1",
-        description="Override pcd_save.interval (-1 disables periodic save)",
-    )
-
-    LAUNCH_FILE = Path(__file__).resolve()  # 若为 symlink，会解到源码路径
+    # PCD保存参数
+    pcd_save_en_arg = DeclareLaunchArgument("pcd_save_en", default_value="True")
+    pcd_save_interval_arg = DeclareLaunchArgument("pcd_save_interval",default_value="-1")
+    LAUNCH_FILE = Path(__file__).resolve()  # 若为 symlink-install，则解析到 install 目录
     LAUNCH_DIR = LAUNCH_FILE.parent  # your_pkg/launch
     PKG_ROOT = LAUNCH_DIR.parent  # your_pkg （源码根，若 symlink-install）
-
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     tmp_path = PKG_ROOT / "tmp"
     tmp_path.mkdir(parents=True, exist_ok=True)
-
     default_pcd_path = tmp_path / f"scans_{ts}.pcd"
-    print(f"Default PCD path: {default_pcd_path}")
-
     pcd_save_file_arg = DeclareLaunchArgument(
         "pcd_save_file",
         default_value=str(default_pcd_path),
-        description="Path (absolute or package-relative) for final scans.pcd",
     )
 
-    # Param files (defaults)
+    # 各个后端的参数文件，都默认放在 rm_bringup/config 目录下
     fast_lio_params_arg = DeclareLaunchArgument(
         "fast_lio_params",
         default_value=PathJoinSubstitution(
@@ -101,7 +88,7 @@ def generate_launch_description():
         description="YAML for point_lio_ros2 node",
     )
 
-    # Configurations
+    # 启动配置
     backend = LaunchConfiguration("backend")
     use_sim_time = LaunchConfiguration("use_sim_time")
     record_rosbag = LaunchConfiguration("record_rosbag")
@@ -135,6 +122,7 @@ def generate_launch_description():
         name="fastlio_mapping",
         output="screen",
         parameters=[fast_lio_params, common_params],
+        remappings=[("/Odometry", "/odom")],
         condition=IfCondition(equals(backend, "fast_lio")),
         # Fix libusb conflict with MVS SDK - prioritize system libusb
         additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
@@ -157,8 +145,8 @@ def generate_launch_description():
         executable="pointlio_mapping",
         name="pointlio_mapping",
         output="screen",
-        remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
         parameters=[point_lio_ros2_params, common_params],
+        remappings=[("/tf", "tf"), ("/tf_static", "tf_static"), ("/Odometry", "/odom")],
         condition=IfCondition(equals(backend, "point_lio")),
         # Fix libusb conflict with MVS SDK - prioritize system libusb
         additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},

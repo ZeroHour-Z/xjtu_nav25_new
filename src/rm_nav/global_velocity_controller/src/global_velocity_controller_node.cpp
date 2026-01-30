@@ -294,14 +294,16 @@ private:
     // vx_map_cmd = 1.0; // 硬编码速度，测试使用
     // vy_map_cmd = 0.0; // 硬编码速度，测试使用
 
-    // 7. 将map系速度指令转换为base_link系
-    // current_yaw += ;
-    predicted_yaw        = current_yaw + 0.1 + 0.0 * std::hypot(vx_map_cmd, vy_map_cmd);
-    const double cos_yaw = std::cos(predicted_yaw);
-    const double sin_yaw = std::sin(predicted_yaw);
-
-    double vx_base_raw = cos_yaw * vx_map_cmd + sin_yaw * vy_map_cmd;
-    double vy_base_raw = -sin_yaw * vx_map_cmd + cos_yaw * vy_map_cmd;
+    // 7. 【陀螺模式修复】直接发送map坐标系速度，坐标变换在handler_node用实时航向角完成
+    // 不再在这里做坐标变换，因为TF有延迟，陀螺旋转时会导致方向错误
+    // const double cos_yaw = std::cos(predicted_yaw);
+    // const double sin_yaw = std::sin(predicted_yaw);
+    // double vx_base_raw = cos_yaw * vx_map_cmd + sin_yaw * vy_map_cmd;
+    // double vy_base_raw = -sin_yaw * vx_map_cmd + cos_yaw * vy_map_cmd;
+    
+    // 直接使用map坐标系速度
+    double vx_base_raw = vx_map_cmd;
+    double vy_base_raw = vy_map_cmd;
 
     // 8. 应用速度和加速度限制
     double vx_out = std::clamp(vx_base_raw, -max_vx_, max_vx_);
@@ -313,7 +315,7 @@ private:
     vx_out              = std::clamp(vx_out, last_cmd_vx_ - max_dv, last_cmd_vx_ + max_dv);
     vy_out              = std::clamp(vy_out, last_cmd_vy_ - max_dv, last_cmd_vy_ + max_dv);
 
-    // 9. 发布指令并更新仿真
+    // 9. 发布指令并更新仿真（现在发送的是map坐标系速度）
     geometry_msgs::msg::Twist cmd;
     cmd.linear.x = vx_out;
     cmd.linear.y = vy_out;
@@ -432,10 +434,13 @@ private:
       vy_map_cmd = escape_speed_ * dy / dist;
     }
 
-    const double cos_yaw = std::cos(current_yaw);
-    const double sin_yaw = std::sin(current_yaw);
-    const double ux_b    = cos_yaw * vx_map_cmd + sin_yaw * vy_map_cmd;
-    const double uy_b    = -sin_yaw * vx_map_cmd + cos_yaw * vy_map_cmd;
+    // 【陀螺模式修复】直接发送map坐标系速度，坐标变换在handler_node完成
+    // const double cos_yaw = std::cos(current_yaw);
+    // const double sin_yaw = std::sin(current_yaw);
+    // const double ux_b    = cos_yaw * vx_map_cmd + sin_yaw * vy_map_cmd;
+    // const double uy_b    = -sin_yaw * vx_map_cmd + cos_yaw * vy_map_cmd;
+    const double ux_b = vx_map_cmd;
+    const double uy_b = vy_map_cmd;
 
     const double cmd_vx_raw = std::clamp(ux_b, -max_vx_, max_vx_);
     const double cmd_vy_raw = std::clamp(uy_b, -max_vy_, max_vy_);

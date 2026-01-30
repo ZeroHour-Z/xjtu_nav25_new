@@ -10,6 +10,8 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 include_directories(
   ${PROJECT_SOURCE_DIR}/include
@@ -28,7 +30,7 @@ ament_target_dependencies(serial_rw_node rclcpp std_msgs)
 
 add_executable(handler_node src/handler_node.cpp)
 target_link_libraries(handler_node rm_comm_protocol)
-ament_target_dependencies(handler_node rclcpp std_msgs geometry_msgs nav_msgs)
+ament_target_dependencies(handler_node rclcpp std_msgs geometry_msgs nav_msgs tf2 tf2_ros)
 
 install(TARGETS
   serial_rw_node

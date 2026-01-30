@@ -10,9 +10,9 @@ import os
 def generate_launch_description():
     rviz = LaunchConfiguration("rviz")
     use_sim_time = LaunchConfiguration("use_sim_time")
-
     input_topic = LaunchConfiguration("input_topic")
     frame_id = LaunchConfiguration("frame_id")
+    gravity_frame = LaunchConfiguration('gravity_frame')
     resolution = LaunchConfiguration("resolution")
     width_m = LaunchConfiguration("width_m")
     height_m = LaunchConfiguration("height_m")
@@ -22,6 +22,9 @@ def generate_launch_description():
     z_clip_max = LaunchConfiguration("z_clip_max")
     min_points_per_cell = LaunchConfiguration("min_points_per_cell")
     step_threshold_m = LaunchConfiguration("step_threshold_m")
+    step_max_threshold_m = LaunchConfiguration("step_max_threshold_m")
+    density_min_pts_per_m3 = LaunchConfiguration("density_min_pts_per_m3")
+    min_points_for_density = LaunchConfiguration("min_points_for_density")
 
     share_dir = get_package_share_directory("rm_ta")
     default_rviz_cfg = os.path.join(share_dir, "rviz", "traversability_default.rviz")
@@ -29,7 +32,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument("rviz", default_value="false"),
-            DeclareLaunchArgument("use_sim_time", default_value="true"),
+            DeclareLaunchArgument("use_sim_time", default_value="false"),
             # Traversability node args (same defaults as single-node launch)
             DeclareLaunchArgument(
                 "input_topic",
@@ -41,7 +44,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "gravity_frame",
-                default_value="camera_init",
+                default_value="odom",
                 description="Output costmap frame ID",
             ),
             DeclareLaunchArgument("resolution", default_value="0.05"),
@@ -56,13 +59,24 @@ def generate_launch_description():
             DeclareLaunchArgument("step_max_threshold_m", default_value="2.0"),
             DeclareLaunchArgument("density_min_pts_per_m3", default_value="20.0"),
             DeclareLaunchArgument("min_points_for_density", default_value="3"),
-            # Static TF: map -> livox_frame
-            Node(
-                package="tf2_ros",
-                executable="static_transform_publisher",
-                name="map_to_livox_frame_tf",
-                arguments=["0", "0", "0", "0", "0", "0", "map", "livox_frame"],
-            ),
+            # Static TF: map -> odom -> body (仅用于无SLAM时的测试)
+            # 注意：如果同时运行SLAM，SLAM会提供odom->body的动态TF，需要注释掉下面两个静态TF
+            # Node(
+            #     package="tf2_ros",
+            #     executable="static_transform_publisher",
+            #     name="map_to_odom_tf",
+            #     arguments=["--x", "0", "--y", "0", "--z", "0", 
+            #               "--qx", "0", "--qy", "0", "--qz", "0", "--qw", "1",
+            #               "--frame-id", "map", "--child-frame-id", "odom"],
+            # ),
+            # Node(
+            #     package="tf2_ros",
+            #     executable="static_transform_publisher",
+            #     name="odom_to_body_tf",
+            #     arguments=["--x", "0", "--y", "0", "--z", "0", 
+            #               "--qx", "0", "--qy", "0", "--qz", "0", "--qw", "1",
+            #               "--frame-id", "odom", "--child-frame-id", "body"],
+            # ),
             Node(
                 package="rm_ta",
                 executable="traversability_costmap_node",
@@ -72,6 +86,7 @@ def generate_launch_description():
                     {
                         "input_topic": input_topic,
                         "frame_id": frame_id,
+                        'gravity_frame': gravity_frame,
                         "resolution": resolution,
                         "width_m": width_m,
                         "height_m": height_m,
@@ -81,6 +96,9 @@ def generate_launch_description():
                         "z_clip_max": z_clip_max,
                         "min_points_per_cell": min_points_per_cell,
                         "step_threshold_m": step_threshold_m,
+                        "step_max_threshold_m": step_max_threshold_m,
+                        "density_min_pts_per_m3": density_min_pts_per_m3,
+                        "min_points_for_density": min_points_for_density,
                         "use_sim_time": use_sim_time,
                     }
                 ],

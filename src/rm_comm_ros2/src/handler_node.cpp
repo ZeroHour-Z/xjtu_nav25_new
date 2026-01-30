@@ -11,12 +11,18 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int8_multi_array.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <string>
 #include <vector>
 
 class HandlerNode : public rclcpp::Node {
 public:
-  HandlerNode() : Node("handler_node") {
+  HandlerNode() : Node("handler_node"), 
+                  tf_buffer_(this->get_clock()),
+                  tf_listener_(tf_buffer_) {
     patrol_group_pub_ = this->create_publisher<std_msgs::msg::String>("/patrol_group", 10);
     tx_pub_ = this->create_publisher<std_msgs::msg::UInt8MultiArray>("/rm_comm/tx_packet", 10);
     rx_sub_ = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
@@ -41,25 +47,85 @@ public:
     tx_timer_ = this->create_wall_timer(
         std::chrono::milliseconds(static_cast<int>(1000.0 / std::max(1.0, hz))),
         std::bind(&HandlerNode::publishTxPacket, this));
+    
+    // 定时更新map坐标系下的航向角（200Hz以应对高速陀螺旋转）
+    tf_timer_ = this->create_wall_timer(
+        std::chrono::milliseconds(5),  // 200Hz 更新TF
+        std::bind(&HandlerNode::updateMapYaw, this));
 
     RCLCPP_INFO(this->get_logger(), "handler_node started");
   }
 
   ~HandlerNode() override = default;
-
 private:
+  // 【关键】用于存储map坐标系下的航向角和角速度
+  double yaw_in_map_{0.0};
+  double prev_yaw_in_map_{0.0};
+  double estimated_wz_{0.0};  // 估计的角速度
+  rclcpp::Time prev_tf_time_;
+  bool has_prev_tf_{false};
+  
+  // 定时从TF更新map坐标系下的航向角，并估计角速度
+  void updateMapYaw() {
+    try {
+      auto tf = tf_buffer_.lookupTransform("map", "base_link", tf2::TimePointZero);
+      tf2::Quaternion q;
+      q.setX(tf.transform.rotation.x);
+      q.setY(tf.transform.rotation.y);
+      q.setZ(tf.transform.rotation.z);
+      q.setW(tf.transform.rotation.w);
+      double roll, pitch, yaw;
+      tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+      
+      // 估计角速度用于预测
+      rclcpp::Time now = this->now();
+      if (has_prev_tf_) {
+        double dt = (now - prev_tf_time_).seconds();
+        if (dt > 1e-6) {
+          double dyaw = yaw - prev_yaw_in_map_;
+          // 处理角度跨越 -PI/PI 的情况
+          while (dyaw > M_PI) dyaw -= 2.0 * M_PI;
+          while (dyaw < -M_PI) dyaw += 2.0 * M_PI;
+          estimated_wz_ = dyaw / dt;
+        }
+      }
+      prev_yaw_in_map_ = yaw;
+      prev_tf_time_ = now;
+      has_prev_tf_ = true;
+      yaw_in_map_ = yaw;
+    } catch (const tf2::TransformException& ex) {
+      // TF not ready yet
+    }
+  }
+
   void onCmdVel(const geometry_msgs::msg::Twist::SharedPtr msg) {
-    // RCLCPP_INFO(this->get_logger(),"cmd_vel:%f",msg->linear.x);
-    nav_info_.x_speed     = msg->linear.x;
-    nav_info_.y_speed     = msg->linear.y;
+    // 【陀螺模式修复】
+    // 收到的cmd_vel是map坐标系的速度（由GVC发送），需要用实时航向角转换到base_link
+    const double vx_map = msg->linear.x;
+    const double vy_map = msg->linear.y;
+    
+    // 【关键】预测未来的航向角（补偿TF延迟和执行延迟）
+    // 预测时间 = TF延迟(~10ms) + 通信延迟(~5ms) + 执行延迟(~5ms) ≈ 20ms
+    const double predict_time = 0.025;  // 25ms预测
+    double predicted_yaw = yaw_in_map_ + estimated_wz_ * predict_time;
+    
+    const double cos_yaw = std::cos(predicted_yaw);
+    const double sin_yaw = std::sin(predicted_yaw);
+    
+    // map坐标系 -> base_link坐标系
+    nav_info_.x_speed     = static_cast<float>(cos_yaw * vx_map + sin_yaw * vy_map);
+    nav_info_.y_speed     = static_cast<float>(-sin_yaw * vx_map + cos_yaw * vy_map);
     nav_info_.yaw_desired = msg->angular.z;
+    
+    // RCLCPP_INFO(this->get_logger(), "yaw: %.2f, wz: %.2f, predicted: %.2f",
+    //             yaw_in_map_, estimated_wz_, predicted_yaw);
   }
 
   void onOdom(const nav_msgs::msg::Odometry::SharedPtr msg) {
     nav_info_.x_current = static_cast<float>(msg->pose.pose.position.x);
     nav_info_.y_current = static_cast<float>(msg->pose.pose.position.y);
     
-    // 从四元数提取 yaw 角
+    // 从四元数提取 yaw 角（odom坐标系，保留用于发送给电控）
     const auto& q = msg->pose.pose.orientation;
     double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
     double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
@@ -73,7 +139,6 @@ private:
     this->set_parameter(rclcpp::Parameter("target_y", y));
     RCLCPP_INFO(this->get_logger(), "Goal pose received: x=%.3f, y=%.3f", x, y);
   }
-
   void onRxPacket(const std_msgs::msg::UInt8MultiArray::SharedPtr msg) {
     // 严格校验：长度与头尾
     constexpr size_t  kRxPacketSize  = sizeof(navCommand_t);
@@ -180,6 +245,11 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pose_sub_;
 
   rclcpp::TimerBase::SharedPtr tx_timer_;
+  rclcpp::TimerBase::SharedPtr tf_timer_;  // TF更新定时器
+  
+  // TF监听器
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
 
   navInfo_t    nav_info_{};
   navCommand_t last_cmd_{};

@@ -1,7 +1,7 @@
 /**:
     ros__parameters:
         feature_extract_enable: false
-        point_filter_num: 3
+        point_filter_num: 4
         max_iteration: 3
         filter_size_surf: 0.5
         filter_size_map: 0.5
@@ -23,8 +23,8 @@
             scan_rate: 10
 
         mapping:
-            acc_cov: 0.1
-            gyr_cov: 0.1
+            acc_cov: 0.05  # 降低以更信任IMU
+            gyr_cov: 0.05  # 降低以更信任陀螺仪
             b_acc_cov: 0.0001
             b_gyr_cov: 0.0001
             fov_degree:    360.0

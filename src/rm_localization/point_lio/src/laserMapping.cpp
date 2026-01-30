@@ -256,7 +256,7 @@ void publish_odometry(
   if (tf_send_en) {
     geometry_msgs::msg::TransformStamped transform;
     transform.header.frame_id = "camera_init";
-    transform.child_frame_id = "aft_mapped";
+    transform.child_frame_id = "body";  // Changed from "aft_mapped" to "body" for consistency
     transform.transform.translation.x = odomAftMapped.pose.pose.position.x;
     transform.transform.translation.y = odomAftMapped.pose.pose.position.y;
     transform.transform.translation.z = odomAftMapped.pose.pose.position.z;

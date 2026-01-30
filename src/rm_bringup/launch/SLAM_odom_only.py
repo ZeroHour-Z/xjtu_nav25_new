@@ -26,10 +26,6 @@ def generate_launch_description():
     rviz_arg = DeclareLaunchArgument("rviz", default_value="true")
     use_sim_time_arg = DeclareLaunchArgument("use_sim_time", default_value="false")
 
-    # LAUNCH_FILE = Path(__file__).resolve()
-    # PKG_ROOT = LAUNCH_FILE.parent.parent
-    # (PKG_ROOT / "tmp").mkdir(parents=True, exist_ok=True)
-
     # Backend parameter files (defaults)
     fast_lio_params_arg = DeclareLaunchArgument(
         "fast_lio_params",
@@ -81,7 +77,7 @@ def generate_launch_description():
         executable="fastlio_mapping",
         name="fastlio_mapping",
         output="screen",
-        parameters=[fast_lio_params],
+        parameters=[fast_lio_params, {"use_sim_time": use_sim_time}],
         condition=IfCondition(equals(backend, "fast_lio")),
         # Fix libusb conflict with MVS SDK - prioritize system libusb
         additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
@@ -91,21 +87,12 @@ def generate_launch_description():
         executable="run_mapping_online",
         name="laser_mapping",
         output="screen",
-        parameters=[faster_lio_params],
+        parameters=[faster_lio_params, {"use_sim_time": use_sim_time}],
         remappings=[("/Odometry", "/odom")],
         condition=IfCondition(equals(backend, "faster_lio")),
         # Fix libusb conflict with MVS SDK - prioritize system libusb
         additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
-    # point_lio_ros2_node = Node(
-    #     package="point_lio_ros2",
-    #     executable="pointlio_mapping",
-    #     name="pointlio_mapping",
-    #     output="screen",
-    #     remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
-    #     parameters=[point_lio_ros2_params],
-    #     condition=IfCondition(equals(backend, "point_lio")),
-    # )
     point_lio_ros2_node = Node(
         package="point_lio",
         executable="pointlio_mapping",
@@ -116,12 +103,24 @@ def generate_launch_description():
             ("/tf_static", "tf_static"),
             ("aft_mapped_to_init", "/odom"),
         ],
-        parameters=[point_lio_ros2_params],
+        parameters=[point_lio_ros2_params, {"use_sim_time": use_sim_time}],
         condition=IfCondition(equals(backend, "point_lio")),
         # Fix libusb conflict with MVS SDK - prioritize system libusb
         additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
     )
     # Default static transform map3d -> camera_init (identity)
+    # For odom-only mode, connect map to odom so RViz can display everything
+    # TF: map3d -> odom (for FAST-LIO/FASTER-LIO only)
+    tf_map_to_odom = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="tf_map3d_to_odom",
+        arguments=["--x", "0", "--y", "0", "--z", "0",
+                   "--qx", "0", "--qy", "0", "--qz", "0", "--qw", "1",
+                   "--frame-id", "map3d", "--child-frame-id", "odom"],
+        condition=IfCondition(PythonExpression(["'", backend, "' != 'point_lio'"])),
+    )
+    
     tf_map3dto2d = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
@@ -129,11 +128,22 @@ def generate_launch_description():
         arguments=["0", "0", "0.25", "-1.5707963267948966", "0", "0", "map", "map3d"],
     )
 
+    # TF: map3d -> camera_init (for Point-LIO only)
     tf_map3d_to_camera_init = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
         name="tf_map3d_to_camera_init",
         arguments=["0", "0", "0", "0", "0", "0", "map3d", "camera_init"],
+        condition=IfCondition(equals(backend, "point_lio")),
+    )
+
+    # For point_lio: camera_init is essentially odom, create alias
+    tf_odom_to_camera_init = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="tf_odom_to_camera_init",
+        arguments=["0", "0", "0", "0", "0", "0", "odom", "camera_init"],
+        condition=IfCondition(equals(backend, "point_lio")),
     )
 
     tf_body2base = Node(
@@ -176,8 +186,10 @@ def generate_launch_description():
             fast_lio_node,
             faster_lio_node,
             point_lio_ros2_node,
+            tf_map_to_odom,
             tf_map3dto2d,
             tf_map3d_to_camera_init,
+            tf_odom_to_camera_init,
             tf_body2base,
             rviz_node,
         ]

@@ -13,8 +13,8 @@
       time_scale: 1e-3
 
     mapping:
-      acc_cov: 0.1
-      gyr_cov: 0.1
+      acc_cov: 0.05  # 降低以更信任IMU加速度计
+      gyr_cov: 0.05  # 降低以更信任陀螺仪（重要！）
       b_acc_cov: 0.0001
       b_gyr_cov: 0.0001
       fov_degree: 360.
@@ -39,8 +39,8 @@
       interval: -1
 
     feature_extract_enable: false
-    point_filter_num: 3
-    max_iteration: 3
+    point_filter_num: 4  # 增加滤波减少噪声
+    max_iteration: 2  # 减少迭代提高实时性
     filter_size_surf: 0.5
     filter_size_map: 0.5
     cube_side_length: 1000.0

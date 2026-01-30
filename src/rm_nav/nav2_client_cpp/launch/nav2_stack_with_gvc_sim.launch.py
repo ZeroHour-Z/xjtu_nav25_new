@@ -11,7 +11,7 @@ def generate_launch_description():
     autostart = True
 
     map_yaml = PathJoinSubstitution(
-        [FindPackageShare("rm_bringup"), "PCD", "test", "newMap.yaml"],
+        [FindPackageShare("rm_bringup"), "PCD", "test4", "newMap.yaml"],
     )
     map_yaml_param = ParameterValue(map_yaml, value_type=str)  # 确保作为字符串求值
 
@@ -73,15 +73,15 @@ def generate_launch_description():
     )
 
     # Static TF: map -> odom
-    nodes.append(
-        Node(
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            name="static_map_to_odom",
-            output="screen",
-            arguments=["0", "0", "0", "0", "0", "0", "map", "odom"],
-        )
-    )
+    # nodes.append(
+    #     Node(
+    #         package="tf2_ros",
+    #         executable="static_transform_publisher",
+    #         name="static_map_to_odom",
+    #         output="screen",
+    #         arguments=["0", "0", "0", "0", "0", "0", "map", "odom"],
+    #     )
+    # )
 
     nodes.extend(
         [

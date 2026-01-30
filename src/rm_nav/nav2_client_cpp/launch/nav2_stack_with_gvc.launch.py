@@ -11,7 +11,7 @@ def generate_launch_description():
     autostart = True
 
     map_yaml = PathJoinSubstitution(
-        [FindPackageShare("rm_bringup"), "PCD", "test", "newMap.yaml"],
+        [FindPackageShare("rm_bringup"), "PCD", "test4", "newMap.yaml"],
     )
     map_yaml_param = ParameterValue(map_yaml, value_type=str)  # 确保作为字符串求值
 
@@ -73,15 +73,15 @@ def generate_launch_description():
     )
 
     # Static TF: map -> odom
-    nodes.append(
-        Node(
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            name="static_map_to_odom",
-            output="screen",
-            arguments=["0", "0", "0", "0", "0", "0", "map", "odom"],
-        )
-    )
+    # nodes.append(
+    #     Node(
+    #         package="tf2_ros",
+    #         executable="static_transform_publisher",
+    #         name="static_map_to_odom",
+    #         output="screen",
+    #         arguments=["0", "0", "0", "0", "0", "0", "map", "odom"],
+    #     )
+    # )
 
     nodes.extend(
         [
@@ -98,6 +98,7 @@ def generate_launch_description():
                 name="controller_server",
                 output="screen",
                 parameters=[default_params, {"use_sim_time": use_sim_time}],
+                # Nav2输出到中间话题，GVC处理后输出到/cmd_vel
                 remappings=[("/cmd_vel", "/nav2_cmd_vel")],
             ),
             Node(
@@ -148,6 +149,7 @@ def generate_launch_description():
         )
     )
 
+    # GVC作为中间层，订阅Nav2的输出并发布到底盘
     nodes.append(
         Node(
             package="global_velocity_controller",

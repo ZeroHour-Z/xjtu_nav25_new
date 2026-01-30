@@ -17,19 +17,17 @@ import os
 
 
 def generate_launch_description():
-    # Core args
     backend_arg = DeclareLaunchArgument(
         "backend",
         default_value="faster_lio",
-        description="Backend to run: fast_lio | faster_lio | point_lio",
+        description="Backend: fast_lio | faster_lio | point_lio",
     )
     rviz_arg = DeclareLaunchArgument("rviz", default_value="true")
     use_sim_time_arg = DeclareLaunchArgument("use_sim_time", default_value="false")
+
+    # PCD保存参数
     pcd_save_en_arg = DeclareLaunchArgument("pcd_save_en", default_value="True")
-    pcd_save_interval_arg = DeclareLaunchArgument(
-        "pcd_save_interval", default_value="-1"
-    )
-    # Default PCD output to source package tmp/ to avoid install/share path
+    pcd_save_interval_arg = DeclareLaunchArgument("pcd_save_interval", default_value="-1")
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")[2:]
     default_src_pcd_path = (
         f"/home/xjturm/xjtu_nav25_new/src/rm_bringup/tmp/pcd_{ts}.pcd"
@@ -39,7 +37,7 @@ def generate_launch_description():
         default_value=default_src_pcd_path,
     )
 
-    # Param files per backend (defaults under rm_bringup/config)
+    # 各个后端的参数文件，都默认放在 rm_bringup/config 目录下
     fast_lio_params_arg = DeclareLaunchArgument(
         "fast_lio_params",
         default_value=PathJoinSubstitution(
@@ -74,18 +72,18 @@ def generate_launch_description():
         description="YAML for point_lio_ros2 node",
     )
 
-    # Optional global localization helpers
+    # 启动全局定位
     run_global_arg = DeclareLaunchArgument(
         "run_global_localization", default_value="true"
     )
     map_arg = DeclareLaunchArgument(
         "map",
         default_value=PathJoinSubstitution(
-            [FindPackageShare("rm_bringup"), "PCD", "test", "test.pcd"]
+            [FindPackageShare("rm_bringup"), "PCD", "test4", "test4.pcd"]
         ),
     )
 
-    # Tunable parameters for global localization
+    # 全局定位参数
     freq_localization_arg = DeclareLaunchArgument("freq_localization", default_value="2.0") # 重定位频率
     localization_th_arg = DeclareLaunchArgument("localization_th", default_value="0.03")    # MSE匹配阈值
     map_voxel_size_arg = DeclareLaunchArgument("map_voxel_size", default_value="0.05")      # 地图降采样体素大小
@@ -94,7 +92,7 @@ def generate_launch_description():
     fov_far_arg = DeclareLaunchArgument("fov_far", default_value="30.0")                    # 远距离视场范围
     use_gicp_arg = DeclareLaunchArgument("use_gicp", default_value="true")                  # 是否使用GICP算法
     
-    # Initial pose parameters
+    # 初始位姿参数
     initial_x_arg = DeclareLaunchArgument("initial_x", default_value="0.0")                 # 初始X位置
     initial_y_arg = DeclareLaunchArgument("initial_y", default_value="0.0")                 # 初始Y位置
     initial_z_arg = DeclareLaunchArgument("initial_z", default_value="0.0")                 # 初始Z位置
@@ -102,12 +100,12 @@ def generate_launch_description():
     use_initial_pose_arg = DeclareLaunchArgument("use_initial_pose", default_value="false") # 是否使用初始位姿
     enable_multi_hypothesis_arg = DeclareLaunchArgument("enable_multi_hypothesis", default_value="true")  # 多假设初始化
     
-    # Global grid search parameters (全局搜索，无需设置初始位置)
+    # 全局搜索参数
     enable_global_search_arg = DeclareLaunchArgument("enable_global_search", default_value="true")  # 全局网格搜索
     global_search_step_arg = DeclareLaunchArgument("global_search_step", default_value="2.0")       # 搜索步长(米)
     global_search_yaw_steps_arg = DeclareLaunchArgument("global_search_yaw_steps", default_value="8")  # 航向角搜索数量
 
-    # Configurations
+    # 启动配置
     backend = LaunchConfiguration("backend")
     use_sim_time = LaunchConfiguration("use_sim_time")
     pcd_save_en = LaunchConfiguration("pcd_save_en")
@@ -272,7 +270,6 @@ def generate_launch_description():
     )
 
     # Static TF for point_lio compatibility: odom -> camera_init (identity)
-    # point_lio uses camera_init as fixed frame, we alias it to odom
     tf_odom2camera_init = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
@@ -284,7 +281,6 @@ def generate_launch_description():
     )
 
     # Static TF for point_lio compatibility: aft_mapped -> body (identity)
-    # point_lio publishes camera_init -> aft_mapped, we need aft_mapped = body
     tf_aft_mapped2body = Node(
         package="tf2_ros",
         executable="static_transform_publisher",
