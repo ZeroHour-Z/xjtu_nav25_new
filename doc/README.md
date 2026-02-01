@@ -1,7 +1,7 @@
 ---
 title: "哨兵寄录"
 publishDate: 2025-10-05
-updatedDate: 2025-11-21
+updatedDate: 2025-02-01
 description: "调车寄录, changelog, 算法探索"
 tags:
   - SLAM
@@ -10,6 +10,10 @@ tags:
 
 ---
 # 哨兵寄录
+
+## 260130 调试
+
+./src/rm_perception/rm_ta/下新写了个功能包叫region_detector，目前只是负责过颠簸路段，其实并不是基于雷达检测点云判读的地形，实际是在config中手动设置区域参数，将某一部分区域作为颠簸路段，在规划的路径通过该区域时，提前修正好位姿，正对着通过
 
 ## 260129 调试
 
