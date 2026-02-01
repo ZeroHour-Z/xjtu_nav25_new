@@ -1,13 +1,13 @@
-# rm_bt_decision
+# rm_decision
 
 ROS 2 (Humble) 行为树框架，基于 `py_trees`，支持 YAML/ Python 直写树，适配 Nav2 `NavigateToPose` 动作，支持 web 可视化（`py_trees_js`）。
 
 ## 运行
 
 ```
-colcon build --packages-select rm_bt_decision
+colcon build --packages-select rm_decision
 . install/setup.bash
-ros2 launch rm_bt_decision bt.launch.py
+ros2 launch rm_decision bt.launch.py
 ```
 
 ## 参数
@@ -27,7 +27,7 @@ ros2 launch rm_bt_decision bt.launch.py
 
 下面以新增一个自定义动作为例，说明从代码到 YAML 的完整流程。
 
-1. 创建文件：在 `rm_bt_decision/actions/` 内新建 Python 文件，例如 `my_action.py`。
+1. 创建文件：在 `rm_decision/actions/` 内新建 Python 文件，例如 `my_action.py`。
 2. 实现类并注册：使用 `@register("YourActionType")` 装饰器注册到行为注册表。
 
 ```python
@@ -53,7 +53,7 @@ class MyAction(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.SUCCESS
 ```
 
-3. 暴露模块：在 `rm_bt_decision/actions/__init__.py` 中 import 该类，并加入 `__all__`，以便加载器在导入 `actions` 包时完成注册。
+3. 暴露模块：在 `rm_decision/actions/__init__.py` 中 import 该类，并加入 `__all__`，以便加载器在导入 `actions` 包时完成注册。
 
 ```python
 from .my_action import MyAction
@@ -75,9 +75,9 @@ __all__ = [
 5. 运行：重建并启动。
 
 ```
-colcon build --packages-select rm_bt_decision
+colcon build --packages-select rm_decision
 . install/setup.bash
-ros2 launch rm_bt_decision bt.launch.py
+ros2 launch rm_decision bt.launch.py
 ```
 
 ### 参数传递与声明约定

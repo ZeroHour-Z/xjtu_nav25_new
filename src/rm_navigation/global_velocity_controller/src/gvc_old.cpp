@@ -29,13 +29,13 @@
 
 using std::placeholders::_1;
 
-class GlobalVelocityControllerNode : public rclcpp::Node {
-   public:
-    GlobalVelocityControllerNode()
-        : Node("global_velocity_controller"),
-          tf_buffer_(this->get_clock()),
-          tf_listener_(tf_buffer_),
-          tf_broadcaster_(std::make_unique<tf2_ros::TransformBroadcaster>(*this)) {
+class GlobalVelocityControllerNode: public rclcpp::Node {
+public:
+    GlobalVelocityControllerNode():
+        Node("global_velocity_controller"),
+        tf_buffer_(this->get_clock()),
+        tf_listener_(tf_buffer_),
+        tf_broadcaster_(std::make_unique<tf2_ros::TransformBroadcaster>(*this)) {
         // Parameters
         declare_parameter<std::string>("map_frame", "map");
         declare_parameter<std::string>("base_frame", "base_link");
@@ -143,18 +143,25 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         simulator_config_.init_y = get_parameter("sim_init_y").as_double();
         simulator_config_.init_yaw = get_parameter("sim_init_yaw").as_double();
         simulator_config_.linear_meas_noise_std = get_parameter("sim_linear_noise_std").as_double();
-        simulator_config_.angular_meas_noise_std = get_parameter("sim_angular_noise_std").as_double();
+        simulator_config_.angular_meas_noise_std =
+            get_parameter("sim_angular_noise_std").as_double();
         simulator_config_.noise_seed = get_parameter("sim_noise_seed").as_int();
-        simulator_config_.process_linear_noise_std = get_parameter("sim_process_linear_noise_std").as_double();
-        simulator_config_.process_angular_noise_std = get_parameter("sim_process_angular_noise_std").as_double();
+        simulator_config_.process_linear_noise_std =
+            get_parameter("sim_process_linear_noise_std").as_double();
+        simulator_config_.process_angular_noise_std =
+            get_parameter("sim_process_angular_noise_std").as_double();
 
         if (simulate_) {
-            RCLCPP_INFO(get_logger(),
-                        "Sim mode ON. Meas noise lin=%.3f m/s, ang=%.3f rad/s; Proc noise lin=%.3f m/s, ang=%.3f rad/s "
-                        "(seed=%d)",
-                        simulator_config_.linear_meas_noise_std, simulator_config_.angular_meas_noise_std,
-                        simulator_config_.process_linear_noise_std, simulator_config_.process_angular_noise_std,
-                        simulator_config_.noise_seed);
+            RCLCPP_INFO(
+                get_logger(),
+                "Sim mode ON. Meas noise lin=%.3f m/s, ang=%.3f rad/s; Proc noise lin=%.3f m/s, ang=%.3f rad/s "
+                "(seed=%d)",
+                simulator_config_.linear_meas_noise_std,
+                simulator_config_.angular_meas_noise_std,
+                simulator_config_.process_linear_noise_std,
+                simulator_config_.process_angular_noise_std,
+                simulator_config_.noise_seed
+            );
         }
 
         velocity_deadband_ = get_parameter("velocity_deadband").as_double();
@@ -165,19 +172,26 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         cmd_accel_limit_angular_ = get_parameter("cmd_accel_limit_angular").as_double();
         planner_config_.slow_down_distance = get_parameter("slow_down_distance").as_double();
         planner_config_.min_target_speed = get_parameter("min_target_speed").as_double();
-        planner_config_.goal_position_tolerance = get_parameter("goal_position_tolerance").as_double();
+        planner_config_.goal_position_tolerance =
+            get_parameter("goal_position_tolerance").as_double();
         planner_config_.goal_yaw_tolerance = get_parameter("goal_yaw_tolerance").as_double();
-        planner_config_.final_heading_switch_distance = get_parameter("final_heading_switch_distance").as_double();
-        planner_config_.enable_dynamic_lookahead = get_parameter("enable_dynamic_lookahead").as_bool();
-        planner_config_.min_lookahead_distance = get_parameter("min_lookahead_distance").as_double();
-        planner_config_.max_lookahead_distance = get_parameter("max_lookahead_distance").as_double();
-        planner_config_.curvature_window_distance = get_parameter("curvature_window_distance").as_double();
+        planner_config_.final_heading_switch_distance =
+            get_parameter("final_heading_switch_distance").as_double();
+        planner_config_.enable_dynamic_lookahead =
+            get_parameter("enable_dynamic_lookahead").as_bool();
+        planner_config_.min_lookahead_distance =
+            get_parameter("min_lookahead_distance").as_double();
+        planner_config_.max_lookahead_distance =
+            get_parameter("max_lookahead_distance").as_double();
+        planner_config_.curvature_window_distance =
+            get_parameter("curvature_window_distance").as_double();
         planner_config_.curvature_low = get_parameter("curvature_low").as_double();
         planner_config_.curvature_high = get_parameter("curvature_high").as_double();
 
         // New: dt cap and sim step
         max_dt_ = get_parameter("max_dt").as_double();
-        simulator_config_.integration_step_dt = get_parameter("sim_integration_step_dt").as_double();
+        simulator_config_.integration_step_dt =
+            get_parameter("sim_integration_step_dt").as_double();
 
         // Escape params
         escape_free_cost_value_ = get_parameter("escape_free_cost_value").as_int();
@@ -197,28 +211,44 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         cmd_pub_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic, 10);
 
         target_twist_sub_ = create_subscription<geometry_msgs::msg::TwistStamped>(
-            target_twist_map_topic, 10, std::bind(&GlobalVelocityControllerNode::onTargetTwist, this, _1));
+            target_twist_map_topic,
+            10,
+            std::bind(&GlobalVelocityControllerNode::onTargetTwist, this, _1)
+        );
 
         odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
-            odom_topic, 50, std::bind(&GlobalVelocityControllerNode::onOdom, this, _1));
+            odom_topic,
+            50,
+            std::bind(&GlobalVelocityControllerNode::onOdom, this, _1)
+        );
 
         path_sub_ = create_subscription<nav_msgs::msg::Path>(
-            path_topic, 10, std::bind(&GlobalVelocityControllerNode::onPath, this, _1));
+            path_topic,
+            10,
+            std::bind(&GlobalVelocityControllerNode::onPath, this, _1)
+        );
 
         costmap_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
-            costmap_topic, 1, std::bind(&GlobalVelocityControllerNode::onCostmap, this, _1));
+            costmap_topic,
+            1,
+            std::bind(&GlobalVelocityControllerNode::onCostmap, this, _1)
+        );
 
         // Timer for control loop
-        control_timer_ = create_wall_timer(std::chrono::milliseconds(20),
-                                           std::bind(&GlobalVelocityControllerNode::onControlTimer, this));
+        control_timer_ = create_wall_timer(
+            std::chrono::milliseconds(20),
+            std::bind(&GlobalVelocityControllerNode::onControlTimer, this)
+        );
 
         RCLCPP_INFO(
             get_logger(),
             "GlobalVelocityControllerNode started. Expecting target Twist in map frame on %s, and/or Path on %s",
-            target_twist_map_topic.c_str(), path_topic.c_str());
+            target_twist_map_topic.c_str(),
+            path_topic.c_str()
+        );
     }
 
-   private:
+private:
     void onTargetTwist(const geometry_msgs::msg::TwistStamped::SharedPtr msg) {
         last_target_twist_map_ = *msg;
         has_target_ = true;
@@ -230,16 +260,16 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         // Convert to internal path for planner
         gvc::Path2D p2d;
         p2d.poses.reserve(last_path_.poses.size());
-        for (const auto &ps : last_path_.poses) {
+        for (const auto& ps: last_path_.poses) {
             gvc::Pose2D pp;
             pp.x = ps.pose.position.x;
             pp.y = ps.pose.position.y;
-            pp.yaw = 0.0;  // yaw along path not used except goal yaw below
+            pp.yaw = 0.0; // yaw along path not used except goal yaw below
             p2d.poses.push_back(pp);
         }
         // overwrite last pose yaw with provided orientation
         if (!p2d.poses.empty()) {
-            const auto &q = last_path_.poses.back().pose.orientation;
+            const auto& q = last_path_.poses.back().pose.orientation;
             tf2::Quaternion tfq(q.x, q.y, q.z, q.w);
             double r, p, y;
             tf2::Matrix3x3(tfq).getRPY(r, p, y);
@@ -254,7 +284,7 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         has_costmap_ = true;
     }
 
-    static double yawFromQuaternion(const geometry_msgs::msg::Quaternion &q) {
+    static double yawFromQuaternion(const geometry_msgs::msg::Quaternion& q) {
         tf2::Quaternion tfq(q.x, q.y, q.z, q.w);
         double r, p, y;
         tf2::Matrix3x3(tfq).getRPY(r, p, y);
@@ -262,8 +292,10 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
     }
 
     static double normalizeAngle(double angle) {
-        while (angle > M_PI) angle -= 2.0 * M_PI;
-        while (angle < -M_PI) angle += 2.0 * M_PI;
+        while (angle > M_PI)
+            angle -= 2.0 * M_PI;
+        while (angle < -M_PI)
+            angle += 2.0 * M_PI;
         return angle;
     }
 
@@ -273,56 +305,72 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
     }
 
     // Helpers for escape mode
-    bool worldToGrid(double x, double y, int &gx, int &gy) const {
-        if (!has_costmap_) return false;
-        const auto &info = last_costmap_.info;
+    bool worldToGrid(double x, double y, int& gx, int& gy) const {
+        if (!has_costmap_)
+            return false;
+        const auto& info = last_costmap_.info;
         const double rel_x = x - info.origin.position.x;
         const double rel_y = y - info.origin.position.y;
-        if (info.resolution <= 0.0) return false;
+        if (info.resolution <= 0.0)
+            return false;
         gx = static_cast<int>(std::floor(rel_x / info.resolution));
         gy = static_cast<int>(std::floor(rel_y / info.resolution));
-        if (gx < 0 || gy < 0 || gx >= static_cast<int>(info.width) || gy >= static_cast<int>(info.height)) return false;
+        if (gx < 0 || gy < 0 || gx >= static_cast<int>(info.width)
+            || gy >= static_cast<int>(info.height))
+            return false;
         return true;
     }
 
-    bool gridToWorld(int gx, int gy, double &x, double &y) const {
-        if (!has_costmap_) return false;
-        const auto &info = last_costmap_.info;
-        if (gx < 0 || gy < 0 || gx >= static_cast<int>(info.width) || gy >= static_cast<int>(info.height)) return false;
+    bool gridToWorld(int gx, int gy, double& x, double& y) const {
+        if (!has_costmap_)
+            return false;
+        const auto& info = last_costmap_.info;
+        if (gx < 0 || gy < 0 || gx >= static_cast<int>(info.width)
+            || gy >= static_cast<int>(info.height))
+            return false;
         x = info.origin.position.x + (static_cast<double>(gx) + 0.5) * info.resolution;
         y = info.origin.position.y + (static_cast<double>(gy) + 0.5) * info.resolution;
         return true;
     }
 
     inline bool isCostLethal(int8_t v) const {
-        if (v < 0) return escape_treat_unknown_as_lethal_;
+        if (v < 0)
+            return escape_treat_unknown_as_lethal_;
         return static_cast<int>(v) >= escape_lethal_threshold_;
     }
 
     bool isPoseLethal(double x, double y) const {
         int gx, gy;
-        if (!worldToGrid(x, y, gx, gy)) return false;
-        const size_t idx = static_cast<size_t>(gy) * last_costmap_.info.width + static_cast<size_t>(gx);
-        if (idx >= last_costmap_.data.size()) return false;
+        if (!worldToGrid(x, y, gx, gy))
+            return false;
+        const size_t idx =
+            static_cast<size_t>(gy) * last_costmap_.info.width + static_cast<size_t>(gx);
+        if (idx >= last_costmap_.data.size())
+            return false;
         return isCostLethal(last_costmap_.data[idx]);
     }
 
-    bool getCostAt(double x, double y, int8_t &out_cost) const {
+    bool getCostAt(double x, double y, int8_t& out_cost) const {
         int gx, gy;
-        if (!worldToGrid(x, y, gx, gy)) return false;
-        const size_t idx = static_cast<size_t>(gy) * last_costmap_.info.width + static_cast<size_t>(gx);
-        if (idx >= last_costmap_.data.size()) return false;
+        if (!worldToGrid(x, y, gx, gy))
+            return false;
+        const size_t idx =
+            static_cast<size_t>(gy) * last_costmap_.info.width + static_cast<size_t>(gx);
+        if (idx >= last_costmap_.data.size())
+            return false;
         out_cost = last_costmap_.data[idx];
         return true;
     }
 
-    bool findNearestFreeCell(int start_gx, int start_gy, int &out_gx, int &out_gy) const {
-        if (!has_costmap_) return false;
-        const auto &info = last_costmap_.info;
+    bool findNearestFreeCell(int start_gx, int start_gy, int& out_gx, int& out_gy) const {
+        if (!has_costmap_)
+            return false;
+        const auto& info = last_costmap_.info;
         const int width = static_cast<int>(info.width);
         const int height = static_cast<int>(info.height);
         const int total = width * height;
-        if (width <= 0 || height <= 0) return false;
+        if (width <= 0 || height <= 0)
+            return false;
 
         std::vector<uint8_t> visited(total, 0);
         std::queue<std::pair<int, int>> q;
@@ -331,17 +379,21 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         auto idx_of = [width](int x, int y) { return y * width + x; };
 
         auto can_step = [&](int x, int y) {
-            if (x < 0 || y < 0 || x >= width || y >= height) return false;
+            if (x < 0 || y < 0 || x >= width || y >= height)
+                return false;
             const int idx = idx_of(x, y);
             const int8_t v = last_costmap_.data[idx];
-            if (v < 0) return !escape_treat_unknown_as_lethal_;
+            if (v < 0)
+                return !escape_treat_unknown_as_lethal_;
             return static_cast<int>(v) < escape_lethal_threshold_;
         };
 
         auto push_if_valid = [&](int x, int y, int d) {
-            if (x < 0 || y < 0 || x >= width || y >= height) return;
+            if (x < 0 || y < 0 || x >= width || y >= height)
+                return;
             const int idx = idx_of(x, y);
-            if (visited[idx]) return;
+            if (visited[idx])
+                return;
             visited[idx] = 1;
             q.emplace(x, y);
             depth_q.emplace(d);
@@ -350,8 +402,8 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         // seed with start even if it is lethal; neighbors will be filtered by can_step
         push_if_valid(start_gx, start_gy, 0);
 
-        const int dx8[8] = {1, -1, 0, 0, 1, 1, -1, -1};
-        const int dy8[8] = {0, 0, 1, -1, 1, -1, 1, -1};
+        const int dx8[8] = { 1, -1, 0, 0, 1, 1, -1, -1 };
+        const int dy8[8] = { 0, 0, 1, -1, 1, -1, 1, -1 };
 
         while (!q.empty()) {
             auto [cx, cy] = q.front();
@@ -360,7 +412,8 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
             depth_q.pop();
 
             const int cidx = idx_of(cx, cy);
-            if (cidx < 0 || cidx >= total) continue;
+            if (cidx < 0 || cidx >= total)
+                continue;
 
             const int8_t val = last_costmap_.data[cidx];
             if (val >= 0 && static_cast<int>(val) <= escape_target_cost_threshold_) {
@@ -369,7 +422,8 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
                 return true;
             }
 
-            if (cur_d >= escape_max_radius_cells_) continue;
+            if (cur_d >= escape_max_radius_cells_)
+                continue;
 
             for (int k = 0; k < 8; ++k) {
                 const int nx = cx + dx8[k];
@@ -393,9 +447,16 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         if (!simulate_) {
             geometry_msgs::msg::TransformStamped tf_map_to_base;
             try {
-                tf_map_to_base = tf_buffer_.lookupTransform(map_frame_, base_frame_, tf2::TimePointZero);
-            } catch (const tf2::TransformException &ex) {
-                RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "TF lookup failed: %s", ex.what());
+                tf_map_to_base =
+                    tf_buffer_.lookupTransform(map_frame_, base_frame_, tf2::TimePointZero);
+            } catch (const tf2::TransformException& ex) {
+                RCLCPP_WARN_THROTTLE(
+                    get_logger(),
+                    *get_clock(),
+                    2000,
+                    "TF lookup failed: %s",
+                    ex.what()
+                );
                 return;
             }
             current_x_m = tf_map_to_base.transform.translation.x;
@@ -434,7 +495,8 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
             vy_b = last_odom_.twist.twist.linear.y;
             wz = last_odom_.twist.twist.angular.z;
         } else {
-            gvc::Twist2D meas = simulator_.sampleMeasuredTwistBody({last_cmd_vx_, last_cmd_vy_, last_cmd_wz_});
+            gvc::Twist2D meas =
+                simulator_.sampleMeasuredTwistBody({ last_cmd_vx_, last_cmd_vy_, last_cmd_wz_ });
             vx_b = meas.vx;
             vy_b = meas.vy;
             wz = meas.wz;
@@ -448,13 +510,15 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
 
         // Escape mode detection and handling
         int8_t current_cost = -1;
-        const bool have_current_cost = has_costmap_ && getCostAt(current_x_m, current_y_m, current_cost);
-        const bool at_target_cost =
-            have_current_cost && current_cost >= 0 && static_cast<int>(current_cost) <= escape_target_cost_threshold_;
+        const bool have_current_cost =
+            has_costmap_ && getCostAt(current_x_m, current_y_m, current_cost);
+        const bool at_target_cost = have_current_cost && current_cost >= 0
+            && static_cast<int>(current_cost) <= escape_target_cost_threshold_;
 
         bool enter_blocked = false;
         if (have_current_cost) {
-            if (current_cost < 0) enter_blocked = escape_treat_unknown_as_lethal_;
+            if (current_cost < 0)
+                enter_blocked = escape_treat_unknown_as_lethal_;
             else
                 enter_blocked = static_cast<int>(current_cost) >= escape_enter_cost_threshold_;
         }
@@ -469,9 +533,15 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
                         escape_target_x_m_ = tx;
                         escape_target_y_m_ = ty;
                         in_escape_mode_ = true;
-                        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
-                                             "Entering ESCAPE mode. Target: (%.3f, %.3f) from cost %d", tx, ty,
-                                             static_cast<int>(current_cost));
+                        RCLCPP_WARN_THROTTLE(
+                            get_logger(),
+                            *get_clock(),
+                            2000,
+                            "Entering ESCAPE mode. Target: (%.3f, %.3f) from cost %d",
+                            tx,
+                            ty,
+                            static_cast<int>(current_cost)
+                        );
                     }
                 }
             }
@@ -482,8 +552,13 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
                 in_escape_mode_ = false;
                 integral_x_ = integral_y_ = integral_w_ = 0.0;
                 has_prev_time_ = false;
-                RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000, "Exited ESCAPE mode (reached cost <= %d).",
-                                     escape_target_cost_threshold_);
+                RCLCPP_INFO_THROTTLE(
+                    get_logger(),
+                    *get_clock(),
+                    2000,
+                    "Exited ESCAPE mode (reached cost <= %d).",
+                    escape_target_cost_threshold_
+                );
             } else {
                 double dx = escape_target_x_m_ - current_x_m;
                 double dy = escape_target_y_m_ - current_y_m;
@@ -492,10 +567,17 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
                     int cgx = 0, cgy = 0;
                     if (worldToGrid(current_x_m, current_y_m, cgx, cgy)) {
                         int tgx = 0, tgy = 0;
-                        if (findNearestFreeCell(cgx, cgy, tgx, tgy) &&
-                            gridToWorld(tgx, tgy, escape_target_x_m_, escape_target_y_m_)) {
-                            RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000, "ESCAPE re-target to (%.3f, %.3f)",
-                                                 escape_target_x_m_, escape_target_y_m_);
+                        if (findNearestFreeCell(cgx, cgy, tgx, tgy)
+                            && gridToWorld(tgx, tgy, escape_target_x_m_, escape_target_y_m_))
+                        {
+                            RCLCPP_INFO_THROTTLE(
+                                get_logger(),
+                                *get_clock(),
+                                2000,
+                                "ESCAPE re-target to (%.3f, %.3f)",
+                                escape_target_x_m_,
+                                escape_target_y_m_
+                            );
                             dx = escape_target_x_m_ - current_x_m;
                             dy = escape_target_y_m_ - current_y_m;
                             dist = std::hypot(dx, dy);
@@ -533,7 +615,7 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
 
                 const double cmd_vx_raw = std::clamp(ux_b, -max_vx_, max_vx_);
                 const double cmd_vy_raw = std::clamp(uy_b, -max_vy_, max_vy_);
-                const double cmd_wz_raw = 0.0;  // no rotation for escape
+                const double cmd_wz_raw = 0.0; // no rotation for escape
 
                 const double max_dv = cmd_accel_limit_linear_ * dt;
                 const double max_dw = cmd_accel_limit_angular_ * dt;
@@ -546,9 +628,12 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
                 double cmd_vy_out = last_cmd_vy_ + dvy;
                 double cmd_wz_out = last_cmd_wz_ + dwz;
 
-                if (std::fabs(cmd_vx_out) < velocity_deadband_) cmd_vx_out = 0.0;
-                if (std::fabs(cmd_vy_out) < velocity_deadband_) cmd_vy_out = 0.0;
-                if (std::fabs(cmd_wz_out) < yaw_deadband_) cmd_wz_out = 0.0;
+                if (std::fabs(cmd_vx_out) < velocity_deadband_)
+                    cmd_vx_out = 0.0;
+                if (std::fabs(cmd_vy_out) < velocity_deadband_)
+                    cmd_vy_out = 0.0;
+                if (std::fabs(cmd_wz_out) < yaw_deadband_)
+                    cmd_wz_out = 0.0;
 
                 geometry_msgs::msg::Twist cmd;
                 cmd.linear.x = cmd_vx_out;
@@ -561,7 +646,7 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
                 last_cmd_wz_ = cmd.angular.z;
 
                 if (simulate_) {
-                    simulator_.integrateBodyCommand({cmd_vx_out, cmd_vy_out, cmd_wz_out}, dt);
+                    simulator_.integrateBodyCommand({ cmd_vx_out, cmd_vy_out, cmd_wz_out }, dt);
 
                     const auto s = simulator_.getPose();
                     geometry_msgs::msg::TransformStamped tf_msg;
@@ -589,15 +674,22 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         if (has_target_) {
             const rclcpp::Time msg_time(last_target_twist_map_.header.stamp);
             const double age = (now - msg_time).seconds();
-            if (external_override_timeout_ <= 0.0 || (age >= 0.0 && age <= external_override_timeout_)) {
+            if (external_override_timeout_ <= 0.0
+                || (age >= 0.0 && age <= external_override_timeout_)) {
                 have_external = true;
             }
         }
 
         bool have_internal = false;
         if (!have_external) {
-            have_internal =
-                planner_.computeTarget(current_x_m, current_y_m, yaw_map_to_base, target_vx_m, target_vy_m, target_wz);
+            have_internal = planner_.computeTarget(
+                current_x_m,
+                current_y_m,
+                yaw_map_to_base,
+                target_vx_m,
+                target_vy_m,
+                target_wz
+            );
         }
 
         if (have_external) {
@@ -660,7 +752,14 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
 
         // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "kd=(%.3f %.3f)", kd_xy_ * dx_err,
         //                      kd_xy_ * dy_err);
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 200, "err=(%.3f %.3f)", ex, ey);
+        RCLCPP_INFO_THROTTLE(
+            this->get_logger(),
+            *this->get_clock(),
+            200,
+            "err=(%.3f %.3f)",
+            ex,
+            ey
+        );
 
         const double ux_b = cos_yaw * ux_m + sin_yaw * uy_m;
         const double uy_b = -sin_yaw * ux_m + cos_yaw * uy_m;
@@ -677,7 +776,8 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
         double cmd_vy_out = cmd_vy_raw;
         double cmd_wz_out = 0;
 
-        if (target_speed_mag < stop_speed_threshold_ && std::fabs(target_wz) < stop_angular_threshold_) {
+        if (target_speed_mag < stop_speed_threshold_
+            && std::fabs(target_wz) < stop_angular_threshold_) {
             cmd_vx_out = 0.0;
             cmd_vy_out = 0.0;
             cmd_wz_out = 0.0;
@@ -696,9 +796,12 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
             cmd_vy_out = last_cmd_vy_ + dvy;
             // cmd_wz_out = last_cmd_wz_ + dwz;
 
-            if (std::fabs(cmd_vx_out) < velocity_deadband_) cmd_vx_out = 0.0;
-            if (std::fabs(cmd_vy_out) < velocity_deadband_) cmd_vy_out = 0.0;
-            if (std::fabs(cmd_wz_out) < yaw_deadband_) cmd_wz_out = 0.0;
+            if (std::fabs(cmd_vx_out) < velocity_deadband_)
+                cmd_vx_out = 0.0;
+            if (std::fabs(cmd_vy_out) < velocity_deadband_)
+                cmd_vy_out = 0.0;
+            if (std::fabs(cmd_wz_out) < yaw_deadband_)
+                cmd_wz_out = 0.0;
         }
 
         geometry_msgs::msg::Twist cmd;
@@ -713,7 +816,7 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
 
         // Loopback simulation: integrate pose and publish TF
         if (simulate_) {
-            simulator_.integrateBodyCommand({cmd_vx_out, cmd_vy_out, cmd_wz_out}, dt);
+            simulator_.integrateBodyCommand({ cmd_vx_out, cmd_vy_out, cmd_wz_out }, dt);
 
             const auto s = simulator_.getPose();
             geometry_msgs::msg::TransformStamped tf_msg;
@@ -733,25 +836,25 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
     std::string map_frame_;
     std::string base_frame_;
 
-    double kp_xy_{1.0}, ki_xy_{0.0}, kd_xy_{0.0};
-    double kp_yaw_{1.0}, ki_yaw_{0.0}, kd_yaw_{0.0};
+    double kp_xy_ { 1.0 }, ki_xy_ { 0.0 }, kd_xy_ { 0.0 };
+    double kp_yaw_ { 1.0 }, ki_yaw_ { 0.0 }, kd_yaw_ { 0.0 };
 
-    double max_vx_{1.0}, max_vy_{1.0}, max_wz_{1.0};
-    double int_limit_xy_{1.0}, int_limit_yaw_{1.0};
+    double max_vx_ { 1.0 }, max_vy_ { 1.0 }, max_wz_ { 1.0 };
+    double int_limit_xy_ { 1.0 }, int_limit_yaw_ { 1.0 };
 
     // Planner and simulator configs
-    gvc::VelocityPlannerConfig planner_config_{};
-    gvc::SimulatorConfig simulator_config_{};
+    gvc::VelocityPlannerConfig planner_config_ {};
+    gvc::SimulatorConfig simulator_config_ {};
 
-    double external_override_timeout_{0.2};
-    double velocity_deadband_{0.02}, yaw_deadband_{0.02};
-    double stop_speed_threshold_{0.04}, stop_angular_threshold_{0.03};
-    double cmd_accel_limit_linear_{2.0}, cmd_accel_limit_angular_{4.0};
+    double external_override_timeout_ { 0.2 };
+    double velocity_deadband_ { 0.02 }, yaw_deadband_ { 0.02 };
+    double stop_speed_threshold_ { 0.04 }, stop_angular_threshold_ { 0.03 };
+    double cmd_accel_limit_linear_ { 2.0 }, cmd_accel_limit_angular_ { 4.0 };
 
-    bool simulate_{false};
+    bool simulate_ { false };
 
     // Controllers' runtime states
-    double last_cmd_vx_{0.0}, last_cmd_vy_{0.0}, last_cmd_wz_{0.0};
+    double last_cmd_vx_ { 0.0 }, last_cmd_vy_ { 0.0 }, last_cmd_wz_ { 0.0 };
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr target_twist_sub_;
@@ -768,39 +871,39 @@ class GlobalVelocityControllerNode : public rclcpp::Node {
     nav_msgs::msg::Odometry last_odom_;
     nav_msgs::msg::Path last_path_;
     nav_msgs::msg::OccupancyGrid last_costmap_;
-    bool has_target_{false};
-    bool has_odom_{false};
-    bool has_path_{false};
-    bool has_costmap_{false};
+    bool has_target_ { false };
+    bool has_odom_ { false };
+    bool has_path_ { false };
+    bool has_costmap_ { false };
 
-    bool has_prev_time_{false};
+    bool has_prev_time_ { false };
     rclcpp::Time prev_time_;
 
-    double integral_x_{0.0}, integral_y_{0.0}, integral_w_{0.0};
-    double prev_ex_{0.0}, prev_ey_{0.0}, prev_ew_{0.0};
+    double integral_x_ { 0.0 }, integral_y_ { 0.0 }, integral_w_ { 0.0 };
+    double prev_ex_ { 0.0 }, prev_ey_ { 0.0 }, prev_ew_ { 0.0 };
 
     // New: dt cap
-    double max_dt_{0.05};
+    double max_dt_ { 0.05 };
 
     // Escape mode states
-    bool in_escape_mode_{false};
-    int escape_free_cost_value_{0};
-    int escape_target_cost_threshold_{0};
-    int escape_enter_cost_threshold_{1};
-    int escape_lethal_threshold_{100};
-    bool escape_treat_unknown_as_lethal_{true};
-    double escape_speed_{0.4};
-    double escape_goal_tolerance_{0.05};
-    int escape_max_radius_cells_{200};
-    double escape_target_x_m_{0.0};
-    double escape_target_y_m_{0.0};
+    bool in_escape_mode_ { false };
+    int escape_free_cost_value_ { 0 };
+    int escape_target_cost_threshold_ { 0 };
+    int escape_enter_cost_threshold_ { 1 };
+    int escape_lethal_threshold_ { 100 };
+    bool escape_treat_unknown_as_lethal_ { true };
+    double escape_speed_ { 0.4 };
+    double escape_goal_tolerance_ { 0.05 };
+    int escape_max_radius_cells_ { 200 };
+    double escape_target_x_m_ { 0.0 };
+    double escape_target_y_m_ { 0.0 };
 
     // Modules
-    gvc::VelocityPlanner planner_{};
-    gvc::Simulator2D simulator_{};
+    gvc::VelocityPlanner planner_ {};
+    gvc::Simulator2D simulator_ {};
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
     rclcpp::spin(std::make_shared<GlobalVelocityControllerNode>());
     rclcpp::shutdown();

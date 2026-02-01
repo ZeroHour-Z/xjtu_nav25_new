@@ -13,10 +13,10 @@
 #include <boost/array.hpp>
 #include <unsupported/Eigen/ArpackSupport>
 
+#include <deque>
 #include <faster_lio_ros2/msg/pose6_d.hpp>
 #include "options.h"
 #include "so3_math.h"
-#include <deque>
 
 using PointType = pcl::PointXYZINormal;
 using PointCloudType = pcl::PointCloud<PointType>;
@@ -243,17 +243,13 @@ inline bool esti_plane(Eigen::Matrix<T, 4, 1> &pca_result, const PointVector &po
     return true;
 }
 
-static double toSec(builtin_interfaces::msg::Time time_stamp)
-{
-    return rclcpp::Time(time_stamp).seconds();
-}
+static double toSec(builtin_interfaces::msg::Time time_stamp) { return rclcpp::Time(time_stamp).seconds(); }
 
-static rclcpp::Time get_ros_time(double timestamp)
-{
+static rclcpp::Time get_ros_time(double timestamp) {
     int32_t sec = std::floor(timestamp);
     auto nanosec_d = (timestamp - std::floor(timestamp)) * 1e9;
     uint32_t nanosec = nanosec_d;
     return rclcpp::Time(sec, nanosec);
 }
 }  // namespace faster_lio::common
-// #endif
+   // #endif

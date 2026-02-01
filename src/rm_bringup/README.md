@@ -3,7 +3,7 @@ rm_bringup
 
 Centralized bringup package for rm_localization. All launch files and common parameter YAMLs live here so other backend packages (fast_lio, faster_lio_ros2, point_lio, fast_lio_localization_ros2) do not need git changes.
 
-SLAM_and_localize.py
+slam_and_localize.launch.py
 -----------------
 
 - Fast-LIO mapping (default):
@@ -20,23 +20,44 @@ SLAM_and_localize.py
 
 Parameter YAMLs are under `config/`. Edit them here to keep all robot-specific settings in one place.
 
+Sentry Bringup (All-in-One)
+---------------------------
+
+The master launch file to start Driver, Localization, Nav2, Decision, and Communication.
+
+**Run Navigation Mode (Match + Nav):**
+```bash
+ros2 launch rm_bringup sentry_bringup.launch.py mode:=nav map:=/path/to/my_map.yaml
+```
+
+**Run Mapping Mode (Build Map):**
+```bash
+ros2 launch rm_bringup sentry_bringup.launch.py mode:=mapping backend:=fast_lio
+```
+
+**Options:**
+- `driver`: `true` (default)
+- `comm`: `true` (default)
+- `decision`: `true` (default)
+- `backend`: `fast_lio` | `faster_lio` | `point_lio` (default: `fast_lio`)
+
 SLAM Mapping Only
 -----------------
 
-Launch mapping without localization extras using `SLAM_mapping_only.py`.
+Launch mapping without localization extras using `slam_mapping_only.launch.py`.
 
 - Live sensors + RViz (Point-LIO by default):
-  `ros2 launch rm_bringup SLAM_mapping_only.py rviz:=true`
+  `ros2 launch rm_bringup slam_mapping_only.launch.py rviz:=true`
 
 - Choose backend explicitly:
-  `ros2 launch rm_bringup SLAM_mapping_only.py backend:=fast_lio`
+  `ros2 launch rm_bringup slam_mapping_only.launch.py backend:=fast_lio`
 
 - Play a rosbag (starts paused, uses simulated clock):
-  1) Launch mapping: `ros2 launch rm_bringup SLAM_mapping_only.py rviz:=true`
+  1) Launch mapping: `ros2 launch rm_bringup slam_mapping_only.launch.py rviz:=true`
   2) In another terminal, manually play: `ros2 bag play rosbags/my_bag --clock --start-paused`
 
 - Record LiDAR and IMU while mapping:
-  `ros2 launch rm_bringup SLAM_mapping_only.py record_rosbag:=true record_output:=rosbags/mapping_record`
+  `ros2 launch rm_bringup slam_mapping_only.launch.py record_rosbag:=true record_output:=rosbags/mapping_record`
 
 - Override backend parameter files:
   - Fast-LIO: `fast_lio_params:=/path/to.yaml`

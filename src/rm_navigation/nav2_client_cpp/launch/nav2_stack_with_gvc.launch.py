@@ -1,8 +1,9 @@
 from launch import LaunchDescription
-from launch.substitutions import PathJoinSubstitution
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import PathJoinSubstitution, LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch_ros.parameter_descriptions import ParameterValue  # 新增
+from launch_ros.parameter_descriptions import ParameterValue
 from launch.actions import LogInfo
 
 
@@ -10,10 +11,19 @@ def generate_launch_description():
     use_sim_time = False
     autostart = True
 
-    map_yaml = PathJoinSubstitution(
+    # 默认地图路径
+    default_map_path = PathJoinSubstitution(
         [FindPackageShare("rm_bringup"), "PCD", "test4", "newMap.yaml"],
     )
-    map_yaml_param = ParameterValue(map_yaml, value_type=str)  # 确保作为字符串求值
+
+    map_arg = DeclareLaunchArgument(
+        'map',
+        default_value=default_map_path,
+        description='要加载的地图 yaml 文件的完整路径'
+    )
+
+    map_yaml_param = ParameterValue(LaunchConfiguration('map'), value_type=str)
+
 
     default_params = PathJoinSubstitution(
         [FindPackageShare("nav2_client_cpp"), "config", "nav2_params.yaml"]
@@ -57,7 +67,10 @@ def generate_launch_description():
         ]
     )
 
-    nodes = []
+    nodes = [
+        map_arg,
+        LogInfo(msg=["Loading map from: ", map_yaml_param]),
+    ]
 
     # 直接使用 substitution（让 launch 在运行时解析为绝对路径）
     nodes.append(
@@ -72,7 +85,7 @@ def generate_launch_description():
         )
     )
 
-    # Static TF: map -> odom
+    # 静态 TF 变换: map -> odom
     # nodes.append(
     #     Node(
     #         package="tf2_ros",

@@ -29,7 +29,6 @@ int main(int argc, char **argv) {
     auto laser_mapping = std::make_shared<faster_lio::LaserMapping>();
 
     rclcpp::spin(laser_mapping);
-    
 
     // laser_mapping->InitROS(nh);
 

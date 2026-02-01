@@ -13,11 +13,12 @@ tags:
 
 ## 260201 调试
 
-更新了功能包命名
+- 更新了功能包命名
+- 代码格式化，添加bringup，修改命名
 
 ## 260130 调试
 
-./src/rm_perception/rm_ta/下新写了个功能包叫region_detector，目前只是负责过颠簸路段，其实并不是基于雷达检测点云判读的地形，实际是在config中手动设置区域参数，将某一部分区域作为颠簸路段，在规划的路径通过该区域时，提前修正好位姿，正对着通过
+./src/rm_perception/rm_terrain_analysis/下新写了个功能包叫region_detector，目前只是负责过颠簸路段，其实并不是基于雷达检测点云判读的地形，实际是在config中手动设置区域参数，将某一部分区域作为颠簸路段，在规划的路径通过该区域时，提前修正好位姿，正对着通过
 
 ## 260129 调试
 
@@ -70,15 +71,15 @@ ros2 launch livox_ros_driver2 msg_MID360_launch.py
 > 迁移到ros2之后,point_lio的延迟变得大且不稳定,原因未知,暂时不建议在线跑。
 
 ```bash
-ros2 launch rm_bringup SLAM_mapping_only.py backend:=point_lio rviz:=true # 仅建图
-ros2 launch rm_bringup SLAM_odom_only.py backend:=faster_lio rviz:=true # 仅里程计
-ros2 launch rm_bringup SLAM_and_localize.py backend:=faster_lio rviz:=true # 启动重定位和里程计
+ros2 launch rm_bringup slam_mapping_only.launch.py backend:=point_lio rviz:=true # 仅建图
+ros2 launch rm_bringup slam_odom_only.launch.py backend:=faster_lio rviz:=true # 仅里程计
+ros2 launch rm_bringup slam_and_localize.launch.py backend:=faster_lio rviz:=true # 启动重定位和里程计
 ```
 
 3. (实验性内容)启动地形分析,输出`/traversability/obstacles`和`/traversability/ground`
 
 ```bash
-ros2 launch rm_ta bag_livox_ta.launch.py 
+ros2 launch rm_terrain_analysis bag_livox_terrain_analysis.launch.py 
 ```
 
 4. 启动`nav_stack`
@@ -96,7 +97,7 @@ ros2 launch nav2_client_cpp nav2_stack_with_gvc_sim.launch.py
 启动决策(还没测):
 
 ```bash
-ros2 launch rm_bt_decision bt.launch.py  
+ros2 launch rm_decision bt.launch.py  
 ```
 
 5. 启动通信节点

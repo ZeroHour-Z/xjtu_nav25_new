@@ -27,17 +27,16 @@
 #ifndef ROS1_HEADERS_H_
 #define ROS1_HEADERS_H_
 
-#include <thread>
 #include <future>
+#include <thread>
 
-#include <ros/ros.h>
-#include <rosbag/bag.h>
-#include <pcl_ros/point_cloud.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/PointCloud2.h>
 #include "livox_ros_driver2/CustomMsg.h"
 #include "livox_ros_driver2/CustomPoint.h"
-
+#include <pcl_ros/point_cloud.h>
+#include <ros/ros.h>
+#include <rosbag/bag.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/PointCloud2.h>
 
 #define DRIVER_DEBUG(node, ...) ROS_DEBUG(__VA_ARGS__)
 #define DRIVER_INFO(node, ...) ROS_INFO(__VA_ARGS__)

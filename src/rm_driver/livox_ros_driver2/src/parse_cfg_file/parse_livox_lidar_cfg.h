@@ -37,20 +37,22 @@
 #include <vector>
 
 namespace livox_ros {
-  
+
 class LivoxLidarConfigParser {
- public:
-  explicit LivoxLidarConfigParser(const std::string& path)  : path_(path) {}
-  ~LivoxLidarConfigParser() {}
+public:
+    explicit LivoxLidarConfigParser(const std::string& path): path_(path) {}
+    ~LivoxLidarConfigParser() {}
 
-  bool Parse(std::vector<UserLivoxLidarConfig> &lidar_configs);
+    bool Parse(std::vector<UserLivoxLidarConfig>& lidar_configs);
 
- private:
-  bool ParseUserConfigs(const rapidjson::Document &doc,
-                         std::vector<UserLivoxLidarConfig> &user_configs);
-  bool ParseExtrinsics(const rapidjson::Value &value, ExtParameter &param);
+private:
+    bool ParseUserConfigs(
+        const rapidjson::Document& doc,
+        std::vector<UserLivoxLidarConfig>& user_configs
+    );
+    bool ParseExtrinsics(const rapidjson::Value& value, ExtParameter& param);
 
-  const std::string path_;
+    const std::string path_;
 };
 
 } // namespace livox_ros

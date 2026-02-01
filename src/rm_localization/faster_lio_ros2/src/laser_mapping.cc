@@ -311,7 +311,8 @@ void LaserMapping::SubAndPubToROS() {
             [this](const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr &msg) { LivoxPCLCallBack(msg); });
     } else {
         sub_pcl_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            lidar_topic, qos, [this](const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) { StandardPCLCallBack(msg); });
+            lidar_topic, qos,
+            [this](const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) { StandardPCLCallBack(msg); });
     }
 
     sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(
@@ -417,9 +418,9 @@ void LaserMapping::Run() {
     // update local map
     Timer::Evaluate([&, this]() { MapIncremental(); }, "    Incremental Mapping");
 
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, 
-        "In num: %zu Downsamp %d Map grid num: %zu Effect num: %d",
-        scan_undistort_->points.size(), cur_pts, ivox_->NumValidGrids(), effect_feat_num_);
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                         "In num: %zu Downsamp %d Map grid num: %zu Effect num: %d", scan_undistort_->points.size(),
+                         cur_pts, ivox_->NumValidGrids(), effect_feat_num_);
 
     // publish or save map pcd
     if (run_in_offline_) {

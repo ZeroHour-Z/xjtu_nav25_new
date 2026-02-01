@@ -35,11 +35,11 @@
 #ifndef __MEKFOM_UTIL_HPP__
 #define __MEKFOM_UTIL_HPP__
 
-#include <Eigen/Core>
 #include "../mtk/src/mtkmath.hpp"
+#include <Eigen/Core>
 namespace esekfom {
 
-template <typename T1, typename T2>
+template<typename T1, typename T2>
 class is_same {
 public:
     operator bool() {
@@ -54,7 +54,7 @@ public:
     }
 };
 
-template <typename T>
+template<typename T>
 class is_double {
 public:
     operator bool() {
@@ -71,12 +71,10 @@ public:
 };
 
 template<typename T>
-static T
-id(const T &x)
-{
-	return x;
+static T id(const T& x) {
+    return x;
 }
 
 } // namespace esekfom
-	
+
 #endif // __MEKFOM_UTIL_HPP__

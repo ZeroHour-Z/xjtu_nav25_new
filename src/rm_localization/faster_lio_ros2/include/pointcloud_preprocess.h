@@ -1,8 +1,8 @@
 #ifndef FASTER_LIO_POINTCLOUD_PROCESSING_H
 #define FASTER_LIO_POINTCLOUD_PROCESSING_H
 
-#include <livox_ros_driver2/msg/custom_msg.hpp>
 #include <pcl_conversions/pcl_conversions.h>
+#include <livox_ros_driver2/msg/custom_msg.hpp>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>

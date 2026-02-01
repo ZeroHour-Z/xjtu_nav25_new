@@ -12,76 +12,75 @@ using namespace std;
 typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointCloud<PointType> PointCloudXYZI;
 
-enum LID_TYPE { AVIA = 1, VELO16, OUST64, HESAIxt32 };  //{1, 2, 3, 4}
+enum LID_TYPE { AVIA = 1, VELO16, OUST64, HESAIxt32 }; //{1, 2, 3, 4}
 enum TIME_UNIT { SEC = 0, MS = 1, US = 2, NS = 3 };
 enum Feature { Nor, Poss_Plane, Real_Plane, Edge_Jump, Edge_Plane, Wire, ZeroPoint };
 enum Surround { Prev, Next };
 enum E_jump { Nr_nor, Nr_zero, Nr_180, Nr_inf, Nr_blind };
 
-const bool time_list_cut_frame(PointType & x, PointType & y);
+const bool time_list_cut_frame(PointType& x, PointType& y);
 
-struct orgtype
-{
-  double range;
-  double dista;
-  double angle[2];
-  double intersect;
-  E_jump edj[2];
-  Feature ftype;
-  orgtype()
-  {
-    range = 0;
-    edj[Prev] = Nr_nor;
-    edj[Next] = Nr_nor;
-    ftype = Nor;
-    intersect = 2;
-  }
+struct orgtype {
+    double range;
+    double dista;
+    double angle[2];
+    double intersect;
+    E_jump edj[2];
+    Feature ftype;
+    orgtype() {
+        range = 0;
+        edj[Prev] = Nr_nor;
+        edj[Next] = Nr_nor;
+        ftype = Nor;
+        intersect = 2;
+    }
 };
 
-namespace velodyne_ros
-{
-struct EIGEN_ALIGN16 Point
-{
-  PCL_ADD_POINT4D;
-  float intensity;
-  float time;
-  uint16_t ring;
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+namespace velodyne_ros {
+struct EIGEN_ALIGN16 Point {
+    PCL_ADD_POINT4D;
+    float intensity;
+    float time;
+    uint16_t ring;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
-}  // namespace velodyne_ros
+} // namespace velodyne_ros
 POINT_CLOUD_REGISTER_POINT_STRUCT(
-  velodyne_ros::Point, (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)(
-                         float, time, time)(std::uint16_t, ring, ring))
+    velodyne_ros::Point,
+    (float, x, x
+    )(float, y, y
+    )(float, z, z)(float, intensity, intensity)(float, time, time)(std::uint16_t, ring, ring)
+)
 
-namespace hesai_ros
-{
-struct EIGEN_ALIGN16 Point
-{
-  PCL_ADD_POINT4D;
-  float intensity;
-  double timestamp;
-  uint16_t ring;
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+namespace hesai_ros {
+struct EIGEN_ALIGN16 Point {
+    PCL_ADD_POINT4D;
+    float intensity;
+    double timestamp;
+    uint16_t ring;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
-}  // namespace hesai_ros
+} // namespace hesai_ros
 POINT_CLOUD_REGISTER_POINT_STRUCT(
-  hesai_ros::Point, (float, x, x)(float, y, y)(float, z, z)(float, intensity, intensity)(
-                      double, timestamp, timestamp)(std::uint16_t, ring, ring))
+    hesai_ros::Point,
+    (float, x, x
+    )(float, y, y
+    )(float, z, z
+    )(float, intensity, intensity)(double, timestamp, timestamp)(std::uint16_t, ring, ring)
+)
 
-namespace ouster_ros
-{
-struct EIGEN_ALIGN16 Point
-{
-  PCL_ADD_POINT4D;
-  float intensity;
-  uint32_t t;
-  uint16_t reflectivity;
-  uint8_t ring;
-  uint16_t ambient;
-  uint32_t range;
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+namespace ouster_ros {
+struct EIGEN_ALIGN16 Point {
+    PCL_ADD_POINT4D;
+    float intensity;
+    uint32_t t;
+    uint16_t reflectivity;
+    uint8_t ring;
+    uint16_t ambient;
+    uint32_t range;
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
-}  // namespace ouster_ros
+} // namespace ouster_ros
 
 // clang-format off
 POINT_CLOUD_REGISTER_POINT_STRUCT(ouster_ros::Point,

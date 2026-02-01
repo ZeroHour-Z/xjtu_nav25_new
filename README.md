@@ -16,8 +16,8 @@
 - **实时定位服务**：支持点云地图匹配定位，适用于室内外复杂环境
 
 ### 3. 地形感知与分析
-- **实时地形分析**：rm_ta模块实现基于点云的可通行性分析
-- **地面分割算法**：linefit_ground_segementation_ros2实现线拟合地面分割
+- **实时地形分析**：rm_terrain_analysis模块实现基于点云的可通行性分析
+- **地面分割算法**：linefit_ground_segmentation实现线拟合地面分割
 - **动态代价地图生成**：支持实时地形代价地图构建和更新
 - **RViz可视化集成**：提供地形分析结果的RViz可视化界面
 
@@ -35,7 +35,7 @@
 - **动态障碍物层**：click_obstacles_layer实现动态障碍物地图层管理
 
 ### 6. 通信模块
-- **ROS2通信框架**：rm_comm_ros2提供完整的ROS2通信解决方案
+- **ROS2通信框架**：rm_communication提供完整的ROS2通信解决方案
 - **模块化设计**：支持灵活的通信拓扑结构配置
 
 ## 待实现的功能
@@ -47,6 +47,28 @@
 4. LOG和replay(作为考核)
 
 ### DONE
+1. 启动文件标准化（sentry_bringup）
+2. 项目结构重构与命名规范化
+3. 主启动文件支持多种运行模式
+
+## 快速开始 (Usage)
+
+### 启动机器人 (Master Bringup)
+我们提供了一个统一的启动入口，支持导航和建图两种模式。
+
+#### 1. 导航模式 (默认)
+启动所有核心模块：驱动、定位(LIO+重定位)、Nav2导航栈、地形分析、决策与通信。
+```bash
+ros2 launch rm_bringup sentry_bringup.launch.py mode:=nav
+```
+*   `rviz:=true` (默认): 打开 RViz 可视化界面。
+*   `map:=/path/to/map.yaml`: 指定加载的地图（默认为 `src/rm_bringup/PCD/test4/newMap.yaml`）。
+
+#### 2. 建图模式
+仅启动 LiDAR 驱动和 LIO 建图后端。
+```bash
+ros2 launch rm_bringup sentry_bringup.launch.py mode:=mapping
+```
 
 bfs脱困
 
@@ -74,15 +96,16 @@ ros2 launch livox_ros_driver2 msg_MID360_launch.py
 > 迁移到ros2之后,point_lio的延迟变得大且不稳定,原因未知,暂时不建议在线跑。
 
 ```bash
-ros2 launch rm_bringup SLAM_mapping.py backend:=point_lio # 仅建图
-ros2 launch rm_bringup SLAM_odom_only.py backend:=faster_lio # 仅里程计
-ros2 launch rm_bringup SLAM_and_localize.py backend:=faster_lio # 启动重定位和里程计
+ros2 launch rm_bringup slam_mapping_only.launch.py backend:=point_lio # 仅建图
+ros2 launch rm_bringup slam_odom_only.launch.py backend:=faster_lio # 仅里程计
+ros2 launch rm_bringup slam_and_localize.launch.py backend:=faster_lio # 启动重定位和里程计
 ```
 
 3. (实验性内容)启动地形分析,输出`/traversability/obstacles`和`/traversability/ground`
 
 ```bash
-ros2 launch rm_ta bag_livox_ta.launch.py 
+ros2 launch rm_terrain_analysis traersability_pointcloud.launch.py 
+ros2 launch rm_terrain_analysis region_detector.launch.py
 ```
 
 4. 启动`nav_stack`
@@ -99,11 +122,11 @@ ros2 launch nav2_client_cpp nav2_stack_with_gvc_sim.launch.py
 
 5. 启动决策(还没测):
 ```bash
-ros2 launch rm_bt_decision bt.launch.py  
+ros2 launch rm_decision bt.launch.py  
 ```
 
 6. 启动通信节点
 
 ```bash
-ros2 launch rm_comm_ros2 rm_comm_bringup.launch.py
+ros2 launch rm_communication communication_bringup.launch.py
 ```

@@ -8,17 +8,17 @@
 
 namespace livox_to_pointcloud2 {
 
-class LivoxToPointCloud2 : public rclcpp::Node {
+class LivoxToPointCloud2: public rclcpp::Node {
 public:
-  LivoxToPointCloud2(const rclcpp::NodeOptions& options);
-  ~LivoxToPointCloud2();
+    LivoxToPointCloud2(const rclcpp::NodeOptions& options);
+    ~LivoxToPointCloud2();
 
 private:
-  LivoxConverter converter;
+    LivoxConverter converter;
 
-  rclcpp::SubscriptionBase::SharedPtr livox_sub;
-  rclcpp::SubscriptionBase::SharedPtr livox2_sub;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr points_pub;
+    rclcpp::SubscriptionBase::SharedPtr livox_sub;
+    rclcpp::SubscriptionBase::SharedPtr livox2_sub;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr points_pub;
 };
 
-}  // namespace livox_to_pointcloud2
+} // namespace livox_to_pointcloud2
