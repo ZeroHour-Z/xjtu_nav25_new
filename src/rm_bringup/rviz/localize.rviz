@@ -97,7 +97,7 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
-          Max Intensity: 142
+          Max Intensity: 110
           Min Color: 0; 0; 0
           Min Intensity: 0
           Name: Accumulate
@@ -128,7 +128,7 @@ Visualization Manager:
           Color: 255; 255; 255
           Color Transformer: FlatColor
           Decay Time: 0
-          Enabled: true
+          Enabled: false
           Invert Rainbow: false
           Max Color: 255; 255; 255
           Max Intensity: 4096
@@ -149,7 +149,7 @@ Visualization Manager:
             Value: /map3d
           Use Fixed Frame: true
           Use rainbow: true
-          Value: true
+          Value: false
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
@@ -165,7 +165,7 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
-          Max Intensity: 142
+          Max Intensity: 150
           Min Color: 0; 0; 0
           Min Intensity: 0
           Name: CloudBody
@@ -191,9 +191,13 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        aft_mapped:
+          Value: true
         base_link:
           Value: true
         body:
+          Value: true
+        camera_init:
           Value: true
         camera_link:
           Value: false
@@ -212,10 +216,11 @@ Visualization Manager:
         map:
           map3d:
             odom:
-              body:
-                base_link:
-                  camera_link:
-                    {}
+              camera_init:
+                body:
+                  base_link:
+                    camera_link:
+                      {}
       Update Interval: 0
       Value: true
     - Class: rviz_common/Group
@@ -358,6 +363,19 @@ Visualization Manager:
           Value: true
       Enabled: true
       Name: Segment
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: RegionMarkers
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /region_markers
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -404,7 +422,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 7.2281928062438965
+      Distance: 15.533476829528809
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -419,10 +437,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5747969150543213
+      Pitch: 1.234796404838562
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.822262763977051
+      Yaw: 4.655466556549072
     Saved: ~
 Window Geometry:
   Displays:

@@ -67,7 +67,6 @@ enum sentry_region {
   local = 0,
   flat,
   hole,
-  narrow_lane,
   slope,
   step,
   fluctuate,
