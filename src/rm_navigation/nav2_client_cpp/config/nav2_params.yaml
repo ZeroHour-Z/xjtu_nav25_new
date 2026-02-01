@@ -199,10 +199,10 @@ global_costmap:
         z_voxels: 10
         mark_threshold: 2  # 需要2次标记才算障碍，减少噪声
         unknown_threshold: 15
-        observation_sources: traversability cloud_clearing  # 仅使用点云（不依赖rm_ta时）
-        # 如果启动了rm_ta，可改为：observation_sources: traversability cloud_clearing
+        observation_sources: traversability cloud_clearing  # 仅使用点云（不依赖rm_terrain_analysis时）
+        # 如果启动了rm_terrain_analysis，可改为：observation_sources: traversability cloud_clearing
         combination_method: 1  # 1=max, 取最大值
-        # --- 地形分析障碍物源（需要启动rm_ta）---
+        # --- 地形分析障碍物源（需要启动rm_terrain_analysis）---
         traversability:
           topic: /traversability/obstacles  # 地形分析障碍物点云话题
           data_type: "PointCloud2"

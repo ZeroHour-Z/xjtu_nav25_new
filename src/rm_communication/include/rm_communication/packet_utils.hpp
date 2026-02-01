@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace rm_comm_ros2 {
+namespace rm_communication {
 
   // 将标准布局结构体序列化为 std::string（零终止不含在内）
   // 目标用于 64 字节包传输

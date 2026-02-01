@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>rm_ta</name>
+  <name>rm_terrain_analysis</name>
   <version>0.1.0</version>
   <description>Traversability costmap node producing nav_msgs/OccupancyGrid from point clouds.</description>
   <maintainer email="xjturm@example.com">xjturm</maintainer>

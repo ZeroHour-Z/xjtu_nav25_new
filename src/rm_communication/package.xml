@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>rm_comm_ros2</name>
+  <name>rm_communication</name>
   <version>0.1.0</version>
   <description>ROS2 communication framework bridging serial_driver and std_msgs/String with 64-byte packets, plus a handler to assemble/disassemble protocol frames.</description>
   <maintainer email="dev@example.com">maintainer</maintainer>

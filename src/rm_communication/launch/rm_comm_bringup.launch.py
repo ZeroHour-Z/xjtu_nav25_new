@@ -22,7 +22,7 @@ def generate_launch_description():
             DeclareLaunchArgument("tx_hz", default_value=tx_hz),
             # 直接使用本包串口节点，无需 serial_driver
             Node(
-                package="rm_comm_ros2",
+                package="rm_communication",
                 executable="serial_rw_node",
                 name="serial_rw_node",
                 parameters=[
@@ -35,7 +35,7 @@ def generate_launch_description():
                 ],
             ),
             Node(
-                package="rm_comm_ros2",
+                package="rm_communication",
                 executable="handler_node",
                 name="handler_node",
                 parameters=[{"tx_hz": tx_hz}],

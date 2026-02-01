@@ -9,7 +9,7 @@
  */
 
 #include "protocol.h"
-#include "rm_comm_ros2/packet_utils.hpp"
+#include "rm_communication/packet_utils.hpp"
 
 #include <cmath>
 #include <cstring>

@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-package_name = 'rm_bt_decision'
+package_name = 'rm_decision'
 
 setup(
     name=package_name,
@@ -20,8 +20,8 @@ setup(
     license='MIT',
     entry_points={
         'console_scripts': [
-            'bt_node = rm_bt_decision.tree_node:main',
-            'bt_render = rm_bt_decision.loader:render_main',
+            'bt_node = rm_decision.tree_node:main',
+            'bt_render = rm_decision.loader:render_main',
         ],
     },
 ) 

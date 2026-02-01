@@ -26,7 +26,7 @@ def generate_launch_description():
     density_min_pts_per_m3 = LaunchConfiguration("density_min_pts_per_m3")
     min_points_for_density = LaunchConfiguration("min_points_for_density")
 
-    share_dir = get_package_share_directory("rm_ta")
+    share_dir = get_package_share_directory("rm_terrain_analysis")
     default_rviz_cfg = os.path.join(share_dir, "rviz", "traversability_default.rviz")
 
     return LaunchDescription(
@@ -78,7 +78,7 @@ def generate_launch_description():
             #               "--frame-id", "odom", "--child-frame-id", "body"],
             # ),
             Node(
-                package="rm_ta",
+                package="rm_terrain_analysis",
                 executable="traversability_costmap_node",
                 name="traversability_costmap_node",
                 output="screen",

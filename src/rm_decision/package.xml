@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>rm_bt_decision</name>
+  <name>rm_decision</name>
   <version>0.1.0</version>
   <description>Behavior Tree framework for ROS 2 (Humble) using py_trees, with configurable YAML/Python trees and Nav2 action integration.</description>
   <maintainer email="dev@xjtu.local">xjtu</maintainer>

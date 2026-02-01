@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(rm_comm_ros2)
+project(rm_communication)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -15,13 +15,13 @@ find_package(tf2_ros REQUIRED)
 
 include_directories(
   ${PROJECT_SOURCE_DIR}/include
-  ${PROJECT_SOURCE_DIR}/include/rm_comm_ros2
+  ${PROJECT_SOURCE_DIR}/include/rm_communication
 )
 
 add_library(rm_comm_protocol INTERFACE)
 target_include_directories(rm_comm_protocol INTERFACE
   ${PROJECT_SOURCE_DIR}/include
-  ${PROJECT_SOURCE_DIR}/include/rm_comm_ros2
+  ${PROJECT_SOURCE_DIR}/include/rm_communication
 )
 
 add_executable(serial_rw_node src/serial_rw_node.cpp)

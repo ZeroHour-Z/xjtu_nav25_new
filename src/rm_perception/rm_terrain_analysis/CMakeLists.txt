@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(rm_ta)
+project(rm_terrain_analysis)
 
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)

@@ -28,7 +28,7 @@ def generate_launch_description():
     min_points_per_cell = LaunchConfiguration("min_points_per_cell")
     step_threshold_m = LaunchConfiguration("step_threshold_m")
 
-    share_dir = get_package_share_directory("rm_ta")
+    share_dir = get_package_share_directory("rm_terrain_analysis")
     default_rviz_cfg = os.path.join(share_dir, "rviz", "traversability_default.rviz")
 
     # Resolve default bag path relative to this file (repo root/rosbags)
@@ -125,7 +125,7 @@ def generate_launch_description():
             # ),
             # Our traversability node
             Node(
-                package="rm_ta",
+                package="rm_terrain_analysis",
                 executable="traversability_costmap_node",
                 name="traversability_costmap_node",
                 output="screen",

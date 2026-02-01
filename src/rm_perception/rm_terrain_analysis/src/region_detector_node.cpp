@@ -28,7 +28,7 @@
 #include <string>
 #include <set>
 
-// 区域类型定义（与 rm_comm_ros2/protocol.h 保持一致）
+// 区域类型定义（与 rm_communication/protocol.h 保持一致）
 enum RegionType {
   REGION_LOCAL = 0,
   REGION_FLAT,

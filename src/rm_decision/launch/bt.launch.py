@@ -7,7 +7,7 @@ import os
 
 
 def generate_launch_description():
-	pkg_share = get_package_share_directory('rm_bt_decision')
+	pkg_share = get_package_share_directory('rm_decision')
 	default_tree = os.path.join(pkg_share, 'config', 'trees', 'nav.yaml')
 
 	tree_arg = DeclareLaunchArgument(
@@ -20,7 +20,7 @@ def generate_launch_description():
 	text_every_arg = DeclareLaunchArgument('text_output_every_n', default_value='1')
 
 	node = Node(
-		package='rm_bt_decision',
+		package='rm_decision',
 		executable='bt_node',
 		name='rm_bt_decision_node',
 		parameters=[{
