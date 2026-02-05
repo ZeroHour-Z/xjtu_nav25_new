@@ -79,7 +79,7 @@ def generate_launch_description():
     map_arg = DeclareLaunchArgument(
         "map",
         default_value=PathJoinSubstitution(
-            [FindPackageShare("rm_bringup"), "PCD", "test4", "test4.pcd"]
+            [FindPackageShare("rm_bringup"), "PCD", "test", "test.pcd"]
         ),
     )
 
@@ -158,10 +158,27 @@ def generate_launch_description():
         name="pointlio_mapping",
         output="screen",
         parameters=[point_lio_ros2_params, common_params],
-        remappings=[("/tf", "tf"), ("/tf_static", "tf_static"), ("/Odometry", "/odom")],
+        remappings=[
+            ("/tf", "tf"), 
+            ("/tf_static", "tf_static"), 
+            ("/Odometry", "/odom"),
+            ("cloud_registered_body", "/cloud_registered_body"),
+            ("cloud_registered", "/cloud_registered"),
+            ("cloud_effected", "/cloud_effected")
+        ],
         condition=IfCondition(PythonExpression(["'", backend, "' == 'point_lio'"])),
         # Fix libusb conflict with MVS SDK - prioritize system libusb
         additional_env={'LD_LIBRARY_PATH': '/usr/lib/x86_64-linux-gnu:' + os.environ.get('LD_LIBRARY_PATH', '')},
+    )
+
+    # 修复 Point-LIO 发布 camera_init 而不是 odom 的问题
+    # 发布静态 TF: odom -> camera_init (重合)
+    point_lio_odom_fix = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="odom_to_camera_init",
+        arguments=["0", "0", "0", "0", "0", "0", "odom", "camera_init"],
+        condition=IfCondition(PythonExpression(["'", backend, "' == 'point_lio'"])),
     )
 
     # Map publisher (PCD)
@@ -338,6 +355,7 @@ def generate_launch_description():
             fast_lio_node,
             faster_lio_node,
             point_lio_ros2_node,
+            point_lio_odom_fix,
             pcd_pub,
             global_loc,
             transform_fusion,

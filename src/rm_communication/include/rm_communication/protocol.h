@@ -82,6 +82,9 @@ enum sentry_state_e {
     pursuit, // 追击状态，此时追击坐标为敌人消失的坐标
     supply, // 补给状态，弹丸打完或血量低下会进入此状态，attack、patrol、free_defense的补给状态
     go_attack_outpost, // 只推前哨站状态
+    hit_energy_buff, // 打符RMUL
+    occupy_point, // 站点RMUL
+    repel, // 驱赶RMUL
 };
 
 enum sentry_event_e {
@@ -111,7 +114,10 @@ static const std::map<uint8_t, std::string> state_map = {
     { sentry_state_e::error, "error" },
     { sentry_state_e::logic, "logic" },
     { sentry_state_e::pursuit, "pursuit" },
-    { sentry_state_e::go_attack_outpost, "go_attack_outpost" }
+    { sentry_state_e::go_attack_outpost, "go_attack_outpost" },
+    { sentry_state_e::hit_energy_buff, "hit_energy_buff" },
+    { sentry_state_e::occupy_point, "occupy_point" },
+    { sentry_state_e::repel, "repel" }
 };
 
 static const std::map<uint8_t, std::string> event_map = {

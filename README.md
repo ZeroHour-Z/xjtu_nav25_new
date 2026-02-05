@@ -104,14 +104,14 @@ ros2 launch rm_bringup slam_and_localize.launch.py backend:=faster_lio # 启动�
 3. (实验性内容)启动地形分析,输出`/traversability/obstacles`和`/traversability/ground`
 
 ```bash
-ros2 launch rm_terrain_analysis traersability_pointcloud.launch.py 
+ros2 launch rm_terrain_analysis traversability_pointcloud.launch.py 
 ros2 launch rm_terrain_analysis region_detector.launch.py
 ```
 
 4. 启动`nav_stack`
 
 ```bash
-ros2 launch nav2_client_cpp nav2_stack_with_gvc.launch.py # 还需要改进
+ros2 launch nav2_client_cpp nav2_stack_with_gvc.launch.py
 ```
 
 或者使用仿真模式,可以用来测试决策

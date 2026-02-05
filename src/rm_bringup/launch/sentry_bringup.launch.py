@@ -19,14 +19,20 @@ def generate_launch_description():
 
     backend_arg = DeclareLaunchArgument(
         'backend',
-        default_value='fast_lio',
-        description='定位后端: fast_lio, faster_lio, point_lio'
+        default_value='point_lio',
+        description='定位后端: fast_lio, fast_lio, point_lio'
     )
 
-    map_arg = DeclareLaunchArgument(
-        'map',
-        default_value=PathJoinSubstitution([FindPackageShare("rm_bringup"), "PCD", "test4", "newMap.yaml"]),
-        description='地图 yaml 文件路径 (仅在 "nav" 模式下使用)'
+    map_pcd_arg = DeclareLaunchArgument(
+        'map_pcd',
+        default_value=PathJoinSubstitution([FindPackageShare("rm_bringup"), "PCD", "test", "test.pcd"]),
+        description='3D 点云地图路径 (用于定位)'
+    )
+
+    map_yaml_arg = DeclareLaunchArgument(
+        'map_yaml',
+        default_value=PathJoinSubstitution([FindPackageShare("rm_bringup"), "PCD", "test", "newMap.yaml"]),
+        description='2D 栅格地图路径 (用于导航)'
     )
 
     # 子系统开关
@@ -34,10 +40,10 @@ def generate_launch_description():
         'driver', default_value='true', description='启动雷达驱动'
     )
     comm_arg = DeclareLaunchArgument(
-        'comm', default_value='true', description='启动通信节点'
+        'comm', default_value='false', description='启动通信节点'
     )
     decision_arg = DeclareLaunchArgument(
-        'decision', default_value='true', description='启动决策节点'
+        'decision', default_value='false', description='启动决策节点'
     )
     rviz_arg = DeclareLaunchArgument(
         'rviz', default_value='true', description='启动 RViz'
@@ -67,6 +73,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'backend': LaunchConfiguration('backend'),
+            'map': LaunchConfiguration('map_pcd'),
             'rviz': LaunchConfiguration('rviz')
         }.items(),
         condition=IfCondition(
@@ -121,7 +128,7 @@ def generate_launch_description():
             ])
         ),
         launch_arguments={
-            'map': LaunchConfiguration('map')
+            'map': LaunchConfiguration('map_yaml')
         }.items(),
         condition=IfCondition(
             PythonExpression(["'", LaunchConfiguration('mode'), "' == 'nav'"])
@@ -168,7 +175,8 @@ def generate_launch_description():
     return LaunchDescription([
         mode_arg,
         backend_arg,
-        map_arg,
+        map_pcd_arg,
+        map_yaml_arg,
         driver_arg,
         comm_arg,
         decision_arg,

@@ -221,7 +221,8 @@ private:
                         pose.pose.position.x,
                         pose.pose.position.y,
                         regions_[i].polygon
-                    )) {
+                    ))
+                {
                     path_regions_.insert(i);
                     break;
                 }
@@ -270,7 +271,7 @@ private:
         this->get_parameter("lookahead_distance", lookahead_dist);
 
         // 检测当前区域
-        RegionType current_region = REGION_FLAT;
+        RegionType current_region = REGION_FLUCTUATE;
         double yaw_desired = 0.0;
         bool in_special_region = false;
 
@@ -488,7 +489,7 @@ private:
     bool has_path_ { false };
     std::set<size_t> path_regions_; // 路径经过的区域索引
 
-    RegionType current_region_ { REGION_FLAT };
+    RegionType current_region_ { REGION_FLUCTUATE };
     bool in_special_region_ { false };
 };
 

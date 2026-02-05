@@ -13,7 +13,7 @@ def generate_launch_description():
 
     # 默认地图路径
     default_map_path = PathJoinSubstitution(
-        [FindPackageShare("rm_bringup"), "PCD", "test4", "newMap.yaml"],
+        [FindPackageShare("rm_bringup"), "PCD", "test", "newMap.yaml"],
     )
 
     map_arg = DeclareLaunchArgument(
@@ -69,7 +69,7 @@ def generate_launch_description():
 
     nodes = [
         map_arg,
-        LogInfo(msg=["Loading map from: ", map_yaml_param]),
+        LogInfo(msg=["Loading map from: ", LaunchConfiguration('map')]),
     ]
 
     # 直接使用 substitution（让 launch 在运行时解析为绝对路径）
