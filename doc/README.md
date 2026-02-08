@@ -11,6 +11,11 @@ tags:
 ---
 # 哨兵寄录
 
+## 260208 调试
+
+- 追击决策测试成功
+目前的追击（test.yaml）：电控发来standby，什么都不做；电控发attack或pursiut，追击电控发来的敌方坐标（odom系）；电控发patrol，进行原地巡逻。与对方保持距离的方式：电控端控制，如果距离在1.5到3.5米之间，电控发车当前的位置（odom系），即原地不动，若超出这个范围就会发送目标位置或者目标的相反位置。
+
 ## 260201 调试
 
 - 更新了功能包命名
@@ -134,60 +139,6 @@ ros2 param set /rm_bt_decision_node supply.reload_y -2.0
 vx_map_cmd = 1.0;
 vy_map_cmd = 0.0;
 predicted_yaw = current_yaw + 0.1 + 0.0 * std::hypot(vx_map_cmd, vy_map_cmd);
-```
-
-## 通信协议 protocol.h
-
-```cpp
-#pragma pack(1)
-typedef struct {           // 都使用朴素机器人坐标系,前x,左y,上z
-  uint8_t  frame_header;   // 帧头 0x72
-  uint8_t  color;          // 机器人颜色（0=RED, 1=BLUE）
-  uint8_t  sentry_command; // 命令
-  uint8_t  eSentryState;   // 当前状态
-  uint8_t  eSentryEvent;   // 事件
-  uint16_t hp_remain;      // 剩余生命值
-  uint16_t bullet_remain;  // 剩余子弹量
-  float    time_remain;    // 剩余时间，单位秒
-  float    time_test;
-  uint32_t reserve_2 : 16;
-  uint32_t reserve_3 : 32;
-  uint32_t reserve_4 : 32;
-  uint32_t reserve_5 : 32;
-  uint32_t reserve_6 : 32;
-  uint32_t reserve_7 : 32;
-  uint32_t reserve_8 : 32;
-  uint32_t reserve_9 : 32;
-  uint32_t reserve_10 : 32;
-  uint32_t reserve_11 : 32;
-  uint32_t reserve_12 : 32;
-  uint32_t reserve_13 : 32;
-  uint8_t  frame_tail; // 帧尾 0x21
-} navCommand_t;
-#pragma pack()
-
-#pragma pack(1)
-typedef struct {         // 都使用朴素机器人坐标系,前x,左y,上z
-  uint8_t  frame_header; // 帧头 0x72
-  float    x_speed;      // x 方向速度
-  float    y_speed;      // y 方向速度
-  float    x_current;    // 当前 x 坐标
-  float    y_current;    // 当前 y 坐标
-  float    x_target;     // 当前 x 坐标
-  float    y_target;     // 当前 y 坐标
-  float    yaw_current;  // 当前云台偏航角
-  float    yaw_desired;  // 期望云台偏航角
-  uint8_t  sentry_region;
-  float    time_test;
-  uint32_t reserve_2 : 8;
-  uint32_t reserve_3 : 32;
-  uint32_t reserve_4 : 32;
-  uint32_t reserve_5 : 32;
-  uint32_t reserve_6 : 32;
-  uint32_t reserve_7 : 32;
-  uint32_t reserve_8 : 32; // 填充到64字节，保持帧尾为最后一字节
-  uint8_t  frame_tail;     // 帧尾 0x4D
-} navInfo_t;
 ```
 
 ## 项目 Launch 文件：

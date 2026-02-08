@@ -244,6 +244,25 @@ private:
 
         // 如果接近最终目标点，则进行特殊处理
         const double dist_to_goal = std::hypot(ex_lookahead, ey_lookahead);
+
+        // 【修复】如果目标点过近（可能是机器人当前位置），立即停止
+        // 这处理了电控发送(0,0)点导致目标就在当前位置的情况
+        if (dist_to_goal < 0.15) { // 15cm以内视为已到达
+            RCLCPP_INFO_THROTTLE(
+                get_logger(),
+                *get_clock(),
+                500,
+                "Target too close (%.3fm), stopping immediately",
+                dist_to_goal
+            );
+            publishZeroTwist();
+            if (is_final_goal) {
+                has_path_ = false; // 如果是最终目标，清除路径
+                resetControllerState();
+            }
+            return;
+        }
+
         if (is_final_goal && dist_to_goal < goal_tolerance_) {
             RCLCPP_INFO(get_logger(), "Goal reached!");
             has_path_ = false; // 标记路径结束

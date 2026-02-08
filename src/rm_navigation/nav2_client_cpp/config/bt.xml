@@ -14,9 +14,15 @@
         <!-- ===== 主任务：边走边全局重规划 ===== -->
         <PipelineSequence name="PlanAndFollow">
           <RateController hz="2.0">
-            <DistanceController distance="0.5">
-              <ComputePathToPose goal="{goal}" path="{path}" planner_id="{planner_id}"/>
-            </DistanceController>
+            <Fallback>
+              <Sequence>
+                <GoalUpdated/>
+                <ComputePathToPose goal="{goal}" path="{path}" planner_id="{planner_id}"/>
+              </Sequence>
+              <DistanceController distance="0.5">
+                <ComputePathToPose goal="{goal}" path="{path}" planner_id="{planner_id}"/>
+              </DistanceController>
+            </Fallback>
           </RateController>
 
           <FollowPath path="{path}" controller_id="{controller_id}" goal_checker_id="{goal_checker_id}"/>

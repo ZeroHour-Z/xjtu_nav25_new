@@ -9,8 +9,14 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages', [f'resource/{package_name}']),
         (f'share/{package_name}', ['package.xml']),
-        (f'share/{package_name}/config/trees', ['config/trees/nav.yaml']),
-        (f'share/{package_name}/launch', ['launch/bt.launch.py']),
+        (f'share/{package_name}/config/trees', [
+            'config/trees/nav.yaml',
+            'config/trees/RMUL.yaml',
+            'config/trees/test.yaml',
+        ]),
+        (f'share/{package_name}/launch', [
+            'launch/bt.launch.py',
+        ]),
     ],
     install_requires=['setuptools', 'PyYAML'],
     zip_safe=True,

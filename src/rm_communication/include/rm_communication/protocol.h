@@ -4,7 +4,7 @@
 #include <string>
 
 #pragma pack(1)
-typedef struct { // 都使用朴素机器人坐标系,前x,左y,上z
+typedef struct { // 电控发送的命令数据
     uint8_t frame_header; // 8位 帧头 0x72
     uint8_t color; // 8位 机器人颜色（0=RED, 1=BLUE）
     // uint8_t  sentry_command;  // 8位 命令
@@ -12,8 +12,8 @@ typedef struct { // 都使用朴素机器人坐标系,前x,左y,上z
     // uint8_t  eSentryEvent;    // 8位 事件
     uint16_t hp_remain; // 16位 剩余生命值
     uint16_t bullet_remain; // 16位 剩余子弹值
-    float enemy_x; // 32位 敌方x坐标
-    float enemy_y; // 32位 敌方y坐标
+    float enemy_x; // 32位 敌方x坐标 (odom坐标系，当需要停止时发送x_current)
+    float enemy_y; // 32位 敌方y坐标 (odom坐标系，当需要停止时发送y_current)
     // float    time_remain;     // 32位 剩余时间，单位秒
     uint8_t is_revive;
     uint32_t reserve_1 : 24; // 32位 保留

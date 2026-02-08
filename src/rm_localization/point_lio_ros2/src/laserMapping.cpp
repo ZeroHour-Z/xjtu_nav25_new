@@ -256,7 +256,8 @@ void publish_frame_world(
             static int scan_wait_num = 0;
             scan_wait_num++;
             if (!pcl_wait_save->empty() && pcd_save_interval > 0
-                && scan_wait_num >= pcd_save_interval) {
+                && scan_wait_num >= pcd_save_interval)
+            {
                 pcd_index++;
                 string all_points_dir(
                     string(string(ROOT_DIR) + "PCD/scans_") + to_string(pcd_index) + string(".pcd")
@@ -471,9 +472,7 @@ int main(int argc, char** argv) {
                 flg_reset = false;
                 init_map = false;
 
-                {
-                    ivox_.reset(new IVoxType(ivox_options_));
-                }
+                { ivox_.reset(new IVoxType(ivox_options_)); }
             }
 
             if (flg_first_scan) {
@@ -492,7 +491,8 @@ int main(int argc, char** argv) {
                     // kf_output.x_.acc *= -1;
 
                     {
-                        while (Measures.lidar_beg_time > get_time_sec(imu_next.header.stamp)
+                        while (
+                            Measures.lidar_beg_time > get_time_sec(imu_next.header.stamp)
                         ) // if it is needed for the new map?
                         {
                             imu_deque.pop_front();
@@ -663,7 +663,8 @@ int main(int argc, char** argv) {
                             bool last_imu = get_time_sec(imu_next.header.stamp)
                                 == get_time_sec(imu_deque.front()->header.stamp);
                             while (get_time_sec(imu_next.header.stamp) < time_predict_last_const
-                                   && !imu_deque.empty()) {
+                                   && !imu_deque.empty())
+                            {
                                 if (!last_imu) {
                                     imu_last = imu_next;
                                     imu_next = *(imu_deque.front());
@@ -784,13 +785,13 @@ int main(int argc, char** argv) {
                                && ((
                                    get_time_sec(imu_next.header.stamp)
                                    < Measures.lidar_beg_time + lidar_time_inte
-                               )))
-                        { // >= ?
+                               ))) { // >= ?
                             if (is_first_frame) {
                                 {
                                     {
                                         while (get_time_sec(imu_next.header.stamp)
-                                               < Measures.lidar_beg_time + lidar_time_inte) {
+                                               < Measures.lidar_beg_time + lidar_time_inte)
+                                        {
                                             // meas.imu.emplace_back(imu_deque.front()); should add to initialization
                                             imu_deque.pop_front();
                                             if (imu_deque.empty())
@@ -880,8 +881,8 @@ int main(int argc, char** argv) {
                             }
                         }
 
-                        while (time_current > get_time_sec(imu_next.header.stamp)
-                        ) // && !imu_deque.empty())
+                        while (time_current
+                               > get_time_sec(imu_next.header.stamp)) // && !imu_deque.empty())
                         {
                             imu_deque.pop_front();
 
@@ -976,13 +977,13 @@ int main(int argc, char** argv) {
                                && ((
                                    get_time_sec(imu_next.header.stamp)
                                    < Measures.lidar_beg_time + lidar_time_inte
-                               )))
-                        { // >= ?
+                               ))) { // >= ?
                             if (is_first_frame) {
                                 {
                                     {
                                         while (get_time_sec(imu_next.header.stamp)
-                                               < Measures.lidar_beg_time + lidar_time_inte) {
+                                               < Measures.lidar_beg_time + lidar_time_inte)
+                                        {
                                             imu_deque.pop_front();
                                             if (imu_deque.empty())
                                                 break;
@@ -1089,27 +1090,27 @@ int main(int argc, char** argv) {
                     static size_t alignment_debug_counter = 0;
                     ++alignment_debug_counter;
                     if (alignment_debug_counter % 5 == 0 || angular_correction_deg > 0.1) {
-                        RCLCPP_INFO(
-                            LOGGER,
-                            "LiDAR alignment #%zu at %.6f s |dt|=%.6f s correction_deg=%.3f "
-                            "delta_rpy=[%.2f %.2f %.2f]",
-                            alignment_debug_counter,
-                            Measures.lidar_last_time,
-                            time_gap,
-                            angular_correction_deg,
-                            delta_rpy(0),
-                            delta_rpy(1),
-                            delta_rpy(2)
-                        );
+                        // RCLCPP_INFO(
+                        //     LOGGER,
+                        //     "LiDAR alignment #%zu at %.6f s |dt|=%.6f s correction_deg=%.3f "
+                        //     "delta_rpy=[%.2f %.2f %.2f]",
+                        //     alignment_debug_counter,
+                        //     Measures.lidar_last_time,
+                        //     time_gap,
+                        //     angular_correction_deg,
+                        //     delta_rpy(0),
+                        //     delta_rpy(1),
+                        //     delta_rpy(2)
+                        // );
                         Eigen::Vector3d imu_after_rpy =
                             imu_after.toRotationMatrix().eulerAngles(0, 1, 2) * kDegreesPerRad;
-                        RCLCPP_INFO(
-                            LOGGER,
-                            "imu_after_rpy: [%.3f, %.3f, %.3f]",
-                            imu_after_rpy(0),
-                            imu_after_rpy(1),
-                            imu_after_rpy(2)
-                        );
+                        // RCLCPP_INFO(
+                        //     LOGGER,
+                        //     "imu_after_rpy: [%.3f, %.3f, %.3f]",
+                        //     imu_after_rpy(0),
+                        //     imu_after_rpy(1),
+                        //     imu_after_rpy(2)
+                        // );
                     }
                 }
             }

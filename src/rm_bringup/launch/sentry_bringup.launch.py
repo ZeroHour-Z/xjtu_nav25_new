@@ -45,6 +45,12 @@ def generate_launch_description():
     decision_arg = DeclareLaunchArgument(
         'decision', default_value='false', description='启动决策节点'
     )
+    terrain_arg = DeclareLaunchArgument(
+        'terrain', default_value='false', description='启动地形分析'
+    )
+    region_detector_arg = DeclareLaunchArgument(
+        'region_detector', default_value='false', description='启动区域检测节点'
+    )
     rviz_arg = DeclareLaunchArgument(
         'rviz', default_value='true', description='启动 RViz'
     )
@@ -111,12 +117,34 @@ def generate_launch_description():
             'rviz': 'false'
         }.items(),
         condition=IfCondition(
-            PythonExpression(["'", LaunchConfiguration('mode'), "' == 'nav'"])
+            PythonExpression([
+                "'", LaunchConfiguration('mode'), "' == 'nav' and '",
+                LaunchConfiguration('terrain'), "' == 'true'"
+            ])
         )
     )
 
     # ========================================================================
-    # 4. Nav2 导航栈 (仅在 nav 模式下)
+    # 4. 区域检测 (仅在 nav 模式下，用于检测颠簸区域等)
+    # ========================================================================
+    region_detector_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('rm_terrain_analysis'), 
+                'launch', 
+                'region_detector.launch.py'
+            ])
+        ),
+        condition=IfCondition(
+            PythonExpression([
+                "'", LaunchConfiguration('mode'), "' == 'nav' and '",
+                LaunchConfiguration('region_detector'), "' == 'true'"
+            ])
+        )
+    )
+
+    # ========================================================================
+    # 5. Nav2 导航栈 (仅在 nav 模式下)
     # ========================================================================
     # 等待地图加载？通常 Nav2 栈会处理自己的生命周期。
     nav_launch = IncludeLaunchDescription(
@@ -136,7 +164,7 @@ def generate_launch_description():
     )
 
     # ========================================================================
-    # 5. 决策模块 (行为树)
+    # 6. 决策模块 (行为树)
     # ========================================================================
     decision_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -152,7 +180,7 @@ def generate_launch_description():
     )
 
     # ========================================================================
-    # 6. 通信模块
+    # 7. 通信模块
     # ========================================================================
     comm_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -180,6 +208,8 @@ def generate_launch_description():
         driver_arg,
         comm_arg,
         decision_arg,
+        terrain_arg,
+        region_detector_arg,
         rviz_arg,
 
         GroupAction([
@@ -187,6 +217,7 @@ def generate_launch_description():
             localization_launch,
             mapping_launch,
             terrain_launch,
+            region_detector_launch,
             nav_launch,
             decision_launch,
             comm_launch,
