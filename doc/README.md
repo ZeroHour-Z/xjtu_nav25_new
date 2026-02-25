@@ -1,15 +1,25 @@
 ---
 title: "哨兵寄录"
 publishDate: 2025-10-05
-updatedDate: 2025-02-01
+updatedDate: 2025-02-25
 description: "调车寄录, changelog, 算法探索"
 tags:
   - SLAM
   - navigation
-  - fast-lio
 
 ---
+
+> 因为是调试日志，因此具有时效性，早期记录可能已经不适用于当下
+
 # 哨兵寄录
+
+## 260225 整理代码
+
+将bringup中的segmentation_param.yaml中的参数复制到linefit_ground_segementation中的对应文件中。改README
+
+## 260208 冬训年前整理
+
+整理代码
 
 ## 260208 调试
 
