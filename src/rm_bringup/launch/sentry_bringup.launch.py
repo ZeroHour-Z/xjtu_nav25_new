@@ -49,7 +49,7 @@ def generate_launch_description():
         'terrain', default_value='false', description='启动地形分析'
     )
     region_detector_arg = DeclareLaunchArgument(
-        'region_detector', default_value='false', description='启动区域检测节点'
+        'region_detector', default_value='true', description='启动区域检测节点'
     )
     rviz_arg = DeclareLaunchArgument(
         'rviz', default_value='true', description='启动 RViz'

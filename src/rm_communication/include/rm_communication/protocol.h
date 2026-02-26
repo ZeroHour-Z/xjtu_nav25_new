@@ -12,10 +12,12 @@ typedef struct { // 电控发送的命令数据
     // uint8_t  eSentryEvent;    // 8位 事件
     uint16_t hp_remain; // 16位 剩余生命值
     uint16_t bullet_remain; // 16位 剩余子弹值
-    float enemy_x; // 32位 敌方x坐标 (odom坐标系，当需要停止时发送x_current)
-    float enemy_y; // 32位 敌方y坐标 (odom坐标系，当需要停止时发送y_current)
+    float target_x; // 32位 目标x坐标 (odom坐标系，当需要停止时发送x_current)
+    float target_y; // 32位 目标y坐标 (odom坐标系，当需要停止时发送y_current)
     // float    time_remain;     // 32位 剩余时间，单位秒
     uint8_t is_revive;
+    float enemy_x; // 32位 敌方x坐标 (odom坐标系)
+    float enemy_y; // 32位 敌方y坐标 (odom坐标系)
     uint32_t reserve_1 : 24; // 32位 保留
     uint32_t reserve_2 : 32; // 32位 保留
     uint32_t reserve_3 : 32; // 32位 保留
@@ -26,8 +28,6 @@ typedef struct { // 电控发送的命令数据
     uint32_t reserve_8 : 32; // 32位 保留
     uint32_t reserve_9 : 32; // 32位 保留
     uint32_t reserve_10 : 32; // 32位 保留
-    uint32_t reserve_11 : 32; // 32位 保留
-    uint32_t reserve_12 : 32; // 32位 保留
     uint8_t frame_tail; // 帧尾 0x21
 } navCommand_t;
 #pragma pack()
@@ -47,7 +47,9 @@ typedef struct { // 都使用朴素机器人坐标系,前x,左y,上z
     float time_test; // 32位测试时间，单位秒//没用
     uint8_t nav_state; // 状态
     uint8_t point_id; // 巡逻区号
-    uint32_t reserve_3 : 24;
+    uint8_t target_region; //敌方车所在的区域
+    uint8_t self_region; //自身所在的区域
+    uint8_t reserve_3; // 8位 保留
     uint32_t reserve_4 : 32; // 32位保留
     uint32_t reserve_5 : 32; // 32位保留
     uint32_t reserve_6 : 32; // 32位保留
@@ -59,7 +61,7 @@ typedef struct { // 都使用朴素机器人坐标系,前x,左y,上z
 
 #if defined(__cplusplus)
 static_assert(sizeof(navInfo_t) == 64, "navInfo_t must be 64 bytes");
-static_assert(sizeof(navCommand_t) == 64, "navInfo_t must be 64 bytes");
+static_assert(sizeof(navCommand_t) == 64, "navCommand_t must be 64 bytes");
 #endif
 
 enum sentry_region {
@@ -103,6 +105,12 @@ enum sentry_event_e {
     outpost_destroyed, // 我方前哨站被击毁
     radar_lock_target, // 雷达锁定目标
     operator_intervene, // 云台手干预
+};
+
+enum target_region_e {
+    self_base_area = 0,
+    central_highland_area,
+    enemy_base_area,
 };
 
 static const std::map<uint8_t, std::string> state_map = {

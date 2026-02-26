@@ -195,14 +195,16 @@ private:
                         this->get_logger(),
                         *this->get_clock(),
                         1000,
-                        "RX -> Color:%d State:%d HP:%d Bullet:%d Enemy_x:%f Enemy_y:%f is_revive:%d",
+                        "RX -> Color:%d State:%d HP:%d Bullet:%d Enemy_x:%f Enemy_y:%f is_revive:%d Target_x:%f Target_y:%f",
                         (int)n_data.color,
                         (int)n_data.eSentryState,
                         (int)n_data.hp_remain,
                         (int)n_data.bullet_remain,
                         n_data.enemy_x,
                         n_data.enemy_y,
-                        (int)n_data.is_revive
+                        (int)n_data.is_revive,
+                        n_data.target_x,
+                        n_data.target_y
                     );
 
                     std_msgs::msg::UInt8MultiArray out_msg;

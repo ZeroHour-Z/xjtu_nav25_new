@@ -38,16 +38,16 @@ public:
     HandlerNode(): Node("handler_node"), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_) {
         // 声明追击相关参数
         this->declare_parameter<double>("chase_min_distance", 0.25); // 自身与敌人的最小追击距离
+        this->declare_parameter<double>("stop_distance_threshold", 0.05); // 判定停车指令阈值
         this->declare_parameter<std::string>("chase_topic", "/chase_point");
         this->declare_parameter<std::string>("map_frame", "map");
         this->declare_parameter<bool>("enable_chase", true); // 是否启用追击功能
 
         chase_min_distance_ = this->get_parameter("chase_min_distance").as_double();
+        stop_distance_threshold_ = this->get_parameter("stop_distance_threshold").as_double();
         chase_topic_ = this->get_parameter("chase_topic").as_string();
         map_frame_ = this->get_parameter("map_frame").as_string();
         enable_chase_ = this->get_parameter("enable_chase").as_bool();
-
-        RCLCPP_INFO(this->get_logger(), "Chase min distance: %.2f m", chase_min_distance_);
 
         // 发布器
         patrol_group_pub_ = this->create_publisher<std_msgs::msg::String>("/patrol_group", 10);
@@ -100,6 +100,18 @@ public:
             std::bind(&HandlerNode::onRegionYaw, this, std::placeholders::_1)
         );
 
+        target_region_sub_ = this->create_subscription<std_msgs::msg::UInt8>(
+            "/target_region",
+            10,
+            std::bind(&HandlerNode::onTargetRegion, this, std::placeholders::_1)
+        );
+
+        self_region_sub_ = this->create_subscription<std_msgs::msg::UInt8>(
+            "/self_region",
+            10,
+            std::bind(&HandlerNode::onSelfRegion, this, std::placeholders::_1)
+        );
+
         // 声明参数
         this->declare_parameter<double>("tx_hz", 100.0);
         this->declare_parameter<double>("target_x", 0.0);
@@ -146,6 +158,14 @@ private:
     // 区域期望航向角回调
     void onRegionYaw(const std_msgs::msg::Float32::SharedPtr msg) {
         region_yaw_desired_ = msg->data;
+    }
+
+    void onTargetRegion(const std_msgs::msg::UInt8::SharedPtr msg) {
+        nav_info_.target_region = msg->data;
+    }
+
+    void onSelfRegion(const std_msgs::msg::UInt8::SharedPtr msg) {
+        nav_info_.self_region = msg->data;
     }
 
     // 定时从 TF 更新 map 坐标系下的航向角
@@ -256,16 +276,24 @@ private:
 
         last_cmd_ = received_cmd;
 
-        // 发布追击目标点（当敌方位置有效时）
-        publishChasePoint(received_cmd);
-
-        // 根据电控状态设置行为树参数
+        // 根据电控状态更新行为树参数
         updateBehaviorTreeParams(received_cmd);
+
+        // 发布导航目标点（使用电控下发的 target_x/target_y）
+        publishChasePoint(received_cmd);
     }
 
     // 根据电控状态更新行为树参数
     void updateBehaviorTreeParams(const navCommand_t& cmd) {
         static const std::string kBtNodeName = "/rm_bt_decision_node";
+
+        // 根据电控状态确定是否需要追击
+        // attack(1) 和 pursuit(7) 状态都触发追击
+        bool should_chase =
+            (cmd.eSentryState == sentry_state_e::attack
+             || cmd.eSentryState == sentry_state_e::pursuit);
+
+        bool chase_enabled = should_chase;
 
         // 初始化参数客户端
         if (!bt_param_client_) {
@@ -280,27 +308,10 @@ private:
                 this->get_logger(),
                 *this->get_clock(),
                 2000,
-                "BT node parameter service not ready"
+                "BT node parameter service not ready, skip BT params this cycle"
             );
             return;
         }
-
-        // 根据电控状态确定是否需要追击
-        // attack(1) 和 pursuit(7) 状态都触发追击
-        bool should_chase =
-            (cmd.eSentryState == sentry_state_e::attack
-             || cmd.eSentryState == sentry_state_e::pursuit);
-
-        // 【odom坐标系】检查敌方位置有效性
-        // 与 publishChasePoint 中的逻辑保持一致：检查目标与当前位置的距离
-        constexpr double kStopDistanceThreshold = 0.2; // 20cm范围内视为停止指令
-        double dx_odom = cmd.enemy_x - nav_info_.x_current;
-        double dy_odom = cmd.enemy_y - nav_info_.y_current;
-        double distance_in_odom = std::sqrt(dx_odom * dx_odom + dy_odom * dy_odom);
-        bool enemy_valid = (distance_in_odom >= kStopDistanceThreshold);
-
-        // 只有在追击状态且敌方位置有效时才真正追击
-        bool chase_enabled = should_chase && enemy_valid;
 
         // 巡逻状态
         bool patrol_enabled = (cmd.eSentryState == sentry_state_e::patrol);
@@ -319,12 +330,13 @@ private:
                 this->get_logger(),
                 *this->get_clock(),
                 1000,
-                "Set BT params: chase=%s, patrol=%s, hp=%u, ammo=%u, state=%d",
+                "Set BT params: chase=%s, patrol=%s, hp=%u, ammo=%u, state=%d, region=%d",
                 chase_enabled ? "true" : "false",
                 patrol_enabled ? "true" : "false",
                 cmd.hp_remain,
                 cmd.bullet_remain,
-                static_cast<int>(cmd.eSentryState)
+                static_cast<int>(cmd.eSentryState),
+                current_region_
             );
         } catch (const std::exception& e) {
             RCLCPP_WARN_THROTTLE(
@@ -402,23 +414,22 @@ private:
             return;
         }
 
-        // 【关键修改】检查敌方位置有效性：电控发送 odom 坐标系下的点
+        // 【关键修改】检查导航目标有效性：电控发送 odom 坐标系下的 target 点
         // 当电控想要停止时，会发送车体当前位置 (x_current, y_current)
         // 因此需要检查目标点与当前位置的距离，而不是与原点的距离
-        constexpr double kStopDistanceThreshold = 0.2; // 20cm范围内视为停止指令
 
-        double dx_odom = cmd.enemy_x - nav_info_.x_current;
-        double dy_odom = cmd.enemy_y - nav_info_.y_current;
+        double dx_odom = cmd.target_x - nav_info_.x_current;
+        double dy_odom = cmd.target_y - nav_info_.y_current;
         double distance_in_odom = std::sqrt(dx_odom * dx_odom + dy_odom * dy_odom);
 
-        if (distance_in_odom < kStopDistanceThreshold) {
+        if (distance_in_odom < stop_distance_threshold_) {
             RCLCPP_INFO_THROTTLE(
                 this->get_logger(),
                 *this->get_clock(),
                 500,
                 "Stop command detected: target odom(%.2f, %.2f) ≈ current odom(%.2f, %.2f), dist=%.3fm - Publishing current position as stop target",
-                cmd.enemy_x,
-                cmd.enemy_y,
+                cmd.target_x,
+                cmd.target_y,
                 nav_info_.x_current,
                 nav_info_.y_current,
                 distance_in_odom
@@ -462,41 +473,41 @@ private:
             return;
         }
 
-        // 电控发来的敌方坐标是 odom 坐标系，需要转换到 map 坐标系
-        geometry_msgs::msg::PoseStamped enemy_in_odom;
-        enemy_in_odom.header.stamp = this->now();
-        enemy_in_odom.header.frame_id = "odom";
-        enemy_in_odom.pose.position.x = cmd.enemy_x;
-        enemy_in_odom.pose.position.y = cmd.enemy_y;
-        enemy_in_odom.pose.position.z = 0.0;
-        enemy_in_odom.pose.orientation.w = 1.0;
+        // 电控发来的 target 坐标是 odom 坐标系，需要转换到 map 坐标系
+        geometry_msgs::msg::PoseStamped target_in_odom;
+        target_in_odom.header.stamp = this->now();
+        target_in_odom.header.frame_id = "odom";
+        target_in_odom.pose.position.x = cmd.target_x;
+        target_in_odom.pose.position.y = cmd.target_y;
+        target_in_odom.pose.position.z = 0.0;
+        target_in_odom.pose.orientation.w = 1.0;
 
-        geometry_msgs::msg::PoseStamped enemy_in_map;
+        geometry_msgs::msg::PoseStamped target_in_map;
         try {
             // 获取 odom -> map 的变换并转换坐标
-            enemy_in_map =
-                tf_buffer_.transform(enemy_in_odom, map_frame_, tf2::durationFromSec(0.1));
+            target_in_map =
+                tf_buffer_.transform(target_in_odom, map_frame_, tf2::durationFromSec(0.1));
         } catch (const tf2::TransformException& ex) {
             RCLCPP_WARN_THROTTLE(
                 this->get_logger(),
                 *this->get_clock(),
                 1000,
-                "Failed to transform enemy position from odom to %s: %s",
+                "Failed to transform target position from odom to %s: %s",
                 map_frame_.c_str(),
                 ex.what()
             );
             return;
         }
 
-        double enemy_map_x = enemy_in_map.pose.position.x;
-        double enemy_map_y = enemy_in_map.pose.position.y;
+        double target_map_x = target_in_map.pose.position.x;
+        double target_map_y = target_in_map.pose.position.y;
 
         // 构建 PoseStamped 消息（已经是 map 坐标系）
         geometry_msgs::msg::PoseStamped chase_pose;
         chase_pose.header.stamp = this->now();
         chase_pose.header.frame_id = map_frame_;
-        chase_pose.pose.position.x = enemy_map_x;
-        chase_pose.pose.position.y = enemy_map_y;
+        chase_pose.pose.position.x = target_map_x;
+        chase_pose.pose.position.y = target_map_y;
         chase_pose.pose.position.z = 0.0;
         // 默认朝向
         chase_pose.pose.orientation.x = 0.0;
@@ -507,18 +518,18 @@ private:
         chase_point_pub_->publish(chase_pose);
 
         // 同步更新 target_x/target_y 参数，使 TX 包中的目标位置也更新
-        this->set_parameter(rclcpp::Parameter("target_x", enemy_map_x));
-        this->set_parameter(rclcpp::Parameter("target_y", enemy_map_y));
+        this->set_parameter(rclcpp::Parameter("target_x", target_map_x));
+        this->set_parameter(rclcpp::Parameter("target_y", target_map_y));
 
         RCLCPP_INFO_THROTTLE(
             this->get_logger(),
             *this->get_clock(),
             500,
             "Published chase point: odom(%.2f, %.2f) -> map(%.2f, %.2f), self_odom(%.2f, %.2f), dist=%.2fm",
-            cmd.enemy_x,
-            cmd.enemy_y,
-            enemy_map_x,
-            enemy_map_y,
+            cmd.target_x,
+            cmd.target_y,
+            target_map_x,
+            target_map_y,
             nav_info_.x_current,
             nav_info_.y_current,
             distance_in_odom
@@ -555,7 +566,8 @@ private:
             *this->get_clock(),
             1000,
             "TX -> x_speed: %.3f y_speed: %.3f x_current: %.3f y_current: %.3f "
-            "x_target: %.3f y_target: %.3f yaw_current: %.3f yaw_desired: %.3f sentry_region: %d",
+            "x_target: %.3f y_target: %.3f yaw_current: %.3f yaw_desired: %.3f sentry_region: %d "
+            "target_region: %u self_region: %u",
             nav_info_.x_speed,
             nav_info_.y_speed,
             nav_info_.x_current,
@@ -564,7 +576,9 @@ private:
             nav_info_.y_target,
             nav_info_.yaw_current,
             nav_info_.yaw_desired,
-            nav_info_.sentry_region
+            nav_info_.sentry_region,
+            static_cast<unsigned int>(nav_info_.target_region),
+            static_cast<unsigned int>(nav_info_.self_region)
         );
 
         std_msgs::msg::UInt8MultiArray out_msg;
@@ -589,6 +603,8 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pose_sub_;
     rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr region_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr region_yaw_sub_;
+    rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr target_region_sub_;
+    rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr self_region_sub_;
 
     // 定时器
     rclcpp::TimerBase::SharedPtr tx_timer_;
@@ -604,6 +620,7 @@ private:
 
     // 追击相关参数
     double chase_min_distance_ { 0.25 }; // 自身与敌人的最小追击距离
+    double stop_distance_threshold_ { 0.05 }; // 判定停车指令阈值
     std::string chase_topic_ { "/chase_point" };
     std::string map_frame_ { "map" };
     bool enable_chase_ { true };
