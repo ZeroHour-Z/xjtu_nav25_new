@@ -75,113 +75,112 @@ tree:
             params:
               memory: true
             children:
-            - type: Sequence
-              name: 打符逻辑
-              params:
-                memory: true
-              decorators:
-                - type: OneShot
-                  name: 打符只执行一次
-                  params:
-                    policy: ON_SUCCESSFUL_COMPLETION  # 成功后锁定不再重入
-              children:
-                - type: NavigateToPoseAction
-                  name: 去打符点
-                  params:
-                    server_name: "navigate_to_pose"
-                    frame_id: "map"
-                    x: 2.0
-                    y: 1.0
-                    yaw: 0.0
-                    timeout_s: 120
-                - type: Wait
-                  name: 等待打符
-                  params:
-                    duration_s: 2.0 
-                - type: PublishString
-                  name: 发布打符完成
-                  params:
-                    topic: "/sentry_actions"
-                    data: "打符完成"
-                    qos_depth: 10            # 可选，默认10
-                    reliable: true           # 可选，默认true（false=BEST_EFFORT）
-                    transient_local: false   # 可选，默认false
-                    publish_every_tick: false # 可选，false=仅首次tick发布一次；true=每tick发布
-            - type: Selector
-              name: 巡逻组选择
-              params:
-                memory: false
-              children:
-                - type: Sequence
-                  name: A组巡逻
-                  params:
-                    memory: true
-                  children:
-                    - type: TopicStringEquals
-                      name: 选择A组?
-                      params:
-                        topic: "/patrol_group"
-                        expected: "A"
-                        latched_ok: false
-                    - type: NavigateToPoseAction
-                      name: A1
-                      params:
-                        server_name: "navigate_to_pose"
-                        frame_id: "map"
-                        x: 5.0
-                        y: 0.0
-                        yaw: 0.0
-                        timeout_s: 120
-                    - type: Wait
-                      name: 等待A
-                      params:
-                        duration_s: 2.0 
-                    - type: NavigateToPoseAction
-                      name: A2
-                      params:
-                        server_name: "navigate_to_pose"
-                        frame_id: "map"
-                        x: 9.0
-                        y: -4.0
-                        yaw: 0.0
-                        timeout_s: 120
-                    - type: Wait
-                      name: 等待A
-                      params:
-                        duration_s: 2.0 
-                - type: Sequence
-                  name: B组巡逻
-                  params:
-                    memory: true
-                  children:
-                    - type: TopicStringEquals
-                      name: 选择B组?
-                      params:
-                        topic: "/patrol_group"
-                        expected: "B"
-                        latched_ok: false
-                    - type: NavigateToPoseAction
-                      name: B1
-                      params:
-                        server_name: "navigate_to_pose"
-                        frame_id: "map"
-                        x: 1.5
-                        y: 4.5
-                        timeout_s: 120
-                    - type: Wait
-                      name: 等待B
-                      params:
-                        duration_s: 2.0 
-                    - type: NavigateToPoseAction
-                      name: B2
-                      params:
-                        server_name: "navigate_to_pose"
-                        frame_id: "map"
-                        x: -2.5
-                        y: 0.5
-                        timeout_s: 120
-                    - type: Wait
-                      name: 等待B
-                      params:
-                        duration_s: 2.0 
-
+              - type: Sequence
+                name: 打符逻辑
+                params:
+                  memory: true
+                decorators:
+                  - type: OneShot
+                    name: 打符只执行一次
+                    params:
+                      policy: ON_SUCCESSFUL_COMPLETION  # 成功后锁定不再重入
+                children:
+                  - type: NavigateToPoseAction
+                    name: 去打符点
+                    params:
+                      server_name: "navigate_to_pose"
+                      frame_id: "map"
+                      x: 2.0
+                      y: 1.0
+                      yaw: 0.0
+                      timeout_s: 120
+                  - type: Wait
+                    name: 等待打符
+                    params:
+                      duration_s: 2.0
+                  - type: PublishString
+                    name: 发布打符完成
+                    params:
+                      topic: "/sentry_actions"
+                      data: "打符完成"
+                      qos_depth: 10            # 可选，默认10
+                      reliable: true           # 可选，默认true（false=BEST_EFFORT）
+                      transient_local: false   # 可选，默认false
+                      publish_every_tick: false # 可选，false=仅首次tick发布一次；true=每tick发布
+              - type: Selector
+                name: 巡逻组选择
+                params:
+                  memory: false
+                children:
+                  - type: Sequence
+                    name: A组巡逻
+                    params:
+                      memory: true
+                    children:
+                      - type: TopicStringEquals
+                        name: 选择A组?
+                        params:
+                          topic: "/patrol_group"
+                          expected: "A"
+                          latched_ok: false
+                      - type: NavigateToPoseAction
+                        name: A1
+                        params:
+                          server_name: "navigate_to_pose"
+                          frame_id: "map"
+                          x: 5.0
+                          y: 0.0
+                          yaw: 0.0
+                          timeout_s: 120
+                      - type: Wait
+                        name: 等待A
+                        params:
+                          duration_s: 2.0
+                      - type: NavigateToPoseAction
+                        name: A2
+                        params:
+                          server_name: "navigate_to_pose"
+                          frame_id: "map"
+                          x: 9.0
+                          y: -4.0
+                          yaw: 0.0
+                          timeout_s: 120
+                      - type: Wait
+                        name: 等待A
+                        params:
+                          duration_s: 2.0
+                  - type: Sequence
+                    name: B组巡逻
+                    params:
+                      memory: true
+                    children:
+                      - type: TopicStringEquals
+                        name: 选择B组?
+                        params:
+                          topic: "/patrol_group"
+                          expected: "B"
+                          latched_ok: false
+                      - type: NavigateToPoseAction
+                        name: B1
+                        params:
+                          server_name: "navigate_to_pose"
+                          frame_id: "map"
+                          x: 1.5
+                          y: 4.5
+                          timeout_s: 120
+                      - type: Wait
+                        name: 等待B
+                        params:
+                          duration_s: 2.0
+                      - type: NavigateToPoseAction
+                        name: B2
+                        params:
+                          server_name: "navigate_to_pose"
+                          frame_id: "map"
+                          x: -2.5
+                          y: 0.5
+                          timeout_s: 120
+                      - type: Wait
+                        name: 等待B
+                        params:
+                          duration_s: 2.0

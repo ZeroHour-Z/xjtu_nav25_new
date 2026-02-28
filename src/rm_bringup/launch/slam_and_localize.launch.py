@@ -85,7 +85,7 @@ def generate_launch_description():
 
     # 全局定位参数
     freq_localization_arg = DeclareLaunchArgument("freq_localization", default_value="2.0") # 重定位频率
-    localization_th_arg = DeclareLaunchArgument("localization_th", default_value="0.03")    # MSE匹配阈值
+    localization_th_arg = DeclareLaunchArgument("localization_th", default_value="0.1")     # MSE匹配阈值
     map_voxel_size_arg = DeclareLaunchArgument("map_voxel_size", default_value="0.05")      # 地图降采样体素大小
     scan_voxel_size_arg = DeclareLaunchArgument("scan_voxel_size", default_value="0.05")    # 扫描降采样体素大小
     fov_arg = DeclareLaunchArgument("fov", default_value="6.28")                            # 视场角（保持360度）

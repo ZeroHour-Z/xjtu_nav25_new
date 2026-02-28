@@ -315,11 +315,19 @@ private:
 
         // 巡逻状态
         bool patrol_enabled = (cmd.eSentryState == sentry_state_e::patrol);
+        bool standby_enabled = (cmd.eSentryState == sentry_state_e::standby);
+        bool supply_enabled = (cmd.eSentryState == sentry_state_e::supply);
+        bool occupy_point_enabled = (cmd.eSentryState == sentry_state_e::occupy_point);
+        bool repel_enabled = (cmd.eSentryState == sentry_state_e::repel);
 
         // 设置行为树参数
         std::vector<rclcpp::Parameter> params = {
             rclcpp::Parameter("chase", chase_enabled),
             rclcpp::Parameter("patrol", patrol_enabled),
+            rclcpp::Parameter("standby", standby_enabled),
+            rclcpp::Parameter("supply", supply_enabled),
+            rclcpp::Parameter("occupy_point", occupy_point_enabled),
+            rclcpp::Parameter("repel", repel_enabled),
             rclcpp::Parameter("hp", static_cast<double>(cmd.hp_remain)),
             rclcpp::Parameter("ammo", static_cast<double>(cmd.bullet_remain)),
         };
@@ -330,9 +338,13 @@ private:
                 this->get_logger(),
                 *this->get_clock(),
                 1000,
-                "Set BT params: chase=%s, patrol=%s, hp=%u, ammo=%u, state=%d, region=%d",
+                "Set BT params: chase=%s, patrol=%s, standby=%s, supply=%s, occupy_point=%s, repel=%s, hp=%u, ammo=%u, state=%d, region=%d",
                 chase_enabled ? "true" : "false",
                 patrol_enabled ? "true" : "false",
+                standby_enabled ? "true" : "false",
+                supply_enabled ? "true" : "false",
+                occupy_point_enabled ? "true" : "false",
+                repel_enabled ? "true" : "false",
                 cmd.hp_remain,
                 cmd.bullet_remain,
                 static_cast<int>(cmd.eSentryState),
@@ -391,11 +403,19 @@ private:
 
         // 记录状态变化
         if (cmd.eSentryState != last_sentry_state_) {
-            const char* state_names[] = {
-                "standby",      "attack", "patrol",  "stationary_defense", "constrained_defense",
-                "error",        "logic",  "pursuit", "go_attack_outpost",  "hit_energy_buff",
-                "occupy_point", "repel"
-            };
+            const char* state_names[] = { "standby",
+                                          "attack",
+                                          "patrol",
+                                          "stationary_defense",
+                                          "constrained_defense",
+                                          "error",
+                                          "logic",
+                                          "pursuit",
+                                          "supply",
+                                          "go_attack_outpost",
+                                          "hit_energy_buff",
+                                          "occupy_point",
+                                          "repel" };
             int state_idx = static_cast<int>(cmd.eSentryState);
             const char* state_name =
                 (state_idx >= 0

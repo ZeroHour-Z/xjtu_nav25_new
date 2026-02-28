@@ -1,19 +1,7 @@
 # 追击与巡逻测试决策树
-# 
 # 功能说明：
-# 1. 追击模式：当 handler_node 设置 chase=true 时（电控状态为 attack/pursuit 且敌方位置有效），
-#              跟随 /chase_point 话题进行追击
+# 1. 追击模式：当 handler_node 设置 chase=true 时（电控状态为 attack/pursuit 且敌方位置有效），跟随 /chase_point 话题进行追击
 # 2. 巡逻模式：当 chase=false 时，在预设点位之间循环巡逻
-#
-# 使用方法：
-#   ros2 launch rm_decision bt.launch.py tree_config:=$(ros2 pkg prefix rm_decision)/share/rm_decision/config/trees/chase_patrol_test.yaml
-#
-# 测试追击：
-#   ros2 param set /rm_bt_decision_node chase true
-#   ros2 topic pub /chase_point geometry_msgs/msg/PoseStamped "{header: {frame_id: 'map'}, pose: {position: {x: 2.0, y: 1.0}}}"
-#
-# 测试巡逻：
-#   ros2 param set /rm_bt_decision_node chase false
 
 tree:
   name: test_tree
@@ -46,14 +34,14 @@ tree:
                   param: "chase"
                   expected: true
                   latched_ok: false
-          
+
           # 标记进入追击状态
           - type: SetBlackboard
             name: 设置追击标记
             params:
               key: "is_chasing"
               value: true
-          
+
           # 发布状态消息（可选，用于调试）
           - type: PublishString
             name: 发布追击状态
@@ -61,7 +49,7 @@ tree:
               topic: "/decision_state"
               data: "CHASING"
               publish_every_tick: false
-          
+
           # 并行执行：追击 + 等待追击结束信号
           - type: Parallel
             name: 追击执行
@@ -81,14 +69,14 @@ tree:
                 params:
                   param: "chase"
                   expected: false
-          
+
           # 清除追击标记
           - type: SetBlackboard
             name: 清除追击标记
             params:
               key: "is_chasing"
               value: false
-          
+
           # 发布追击结束状态
           - type: PublishString
             name: 发布追击结束
@@ -110,7 +98,7 @@ tree:
               param: "patrol"
               expected: true
               latched_ok: false
-          
+
           # 发布巡逻状态
           - type: PublishString
             name: 发布巡逻状态
@@ -118,13 +106,13 @@ tree:
               topic: "/decision_state"
               data: "PATROL_STANDBY"
               publish_every_tick: false
-          
+
           # 原地待命：持续等待，不执行任何导航动作
           - type: Wait
             name: 原地待命
             params:
               duration_s: 999999.0
-          
+
           # # 巡逻点2
           # - type: NavigateToPoseAction
           #   name: 巡逻点2
@@ -135,12 +123,12 @@ tree:
           #     y: 0.0
           #     yaw: 1.57
           #     timeout_s: 60
-          
+
           # - type: Wait
           #   name: 等待2
           #   params:
           #     duration_s: 1.0
-          
+
           # # 巡逻点3
           # - type: NavigateToPoseAction
           #   name: 巡逻点3
@@ -151,12 +139,12 @@ tree:
           #     y: 3.0
           #     yaw: 3.14
           #     timeout_s: 60
-          
+
           # - type: Wait
           #   name: 等待3
           #   params:
           #     duration_s: 1.0
-          
+
           # # 巡逻点4
           # - type: NavigateToPoseAction
           #   name: 巡逻点4
@@ -167,8 +155,9 @@ tree:
           #     y: 3.0
           #     yaw: -1.57
           #     timeout_s: 60
-          
+
           # - type: Wait
           #   name: 等待4
           #   params:
           #     duration_s: 1.0
+                  

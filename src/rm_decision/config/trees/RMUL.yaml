@@ -1,187 +1,139 @@
+# RMUL 状态行为树
+# 功能说明：
+# 1. 本树依赖 handler_node 下发的布尔参数：standby/supply/occupy_point/repel
+# 2. 根节点为 Selector，按从上到下优先级匹配第一个成功分支
+# 3. 坐标均为 map 坐标系
 tree:
-  name: nav_tree
+  name: RMUL_tree
   root:
     type: Selector
-    name: 整体逻辑
+    name: RMUL状态决策
     params:
       memory: false
     children:
+      # standby：原地待命，不下发任何导航目标
       - type: Sequence
-        name: 需要补给则补给
+        name: standby_原地待命
         params:
-          memory: true
+          memory: false
         children:
-          - type: SupplyManagerAction
-            name: 补给管理
-      - type: Sequence
-        name: 需要追击则追击
-        params:
-          memory: true
-        children:
-          - type: Selector
-            name: 追击触发或进行中
+          - type: ParamBoolCondition
+            name: standby状态?
             params:
-              memory: false
-            children:
-              - type: CheckBlackboard
-                name: 已在追击中?
-                params:
-                  key: "is_chasing"
-                  expected: true
-              - type: ParamBoolCondition
-                name: 追击触发?
-                params:
-                  param: "chase"   # 全局bool参数
-                  expected: true
-                  latched_ok: false
-          - type: SetBlackboard
-            name: 标记进入追击
-            params:
-              key: "is_chasing"
-              value: true
+              param: "standby"
+              expected: true
+              latched_ok: false
           - type: PublishString
-            name: 发布追击中
+            name: 发布standby
             params:
               topic: "/sentry_actions"
-              data: "追击中"
-          - type: Parallel
-            name: 追击执行
+              data: "STANDBY"
+              publish_every_tick: false
+          - type: Wait
+            name: 待命等待
             params:
-              policy: SuccessOnOne
-              synchronise: false
-            children:
-              - type: ChaseDynamicPointAction
-                name: 跟随追击点
-                params:
-                  server_name: "navigate_to_pose"
-                  topic: "/chase_point"
-              - type: WaitForParamBool
-                name: 等待追击结束
-                params:
-                  param: "chase"
-                  expected: false
-          - type: SetBlackboard
-            name: 清除追击标记
-            params:
-              key: "is_chasing"
-              value: false
-      - type: Sequence
-        name: 正常巡航
-        params:
-          memory: true
-        children:
-          - type: Sequence
-            name: 巡航逻辑
-            params:
-              memory: true
-            children:
-            - type: Sequence
-              name: 打符逻辑
-              params:
-                memory: true
-              decorators:
-                - type: OneShot
-                  name: 打符只执行一次
-                  params:
-                    policy: ON_SUCCESSFUL_COMPLETION  # 成功后锁定不再重入
-              children:
-                - type: NavigateToPoseAction
-                  name: 去打符点
-                  params:
-                    server_name: "navigate_to_pose"
-                    frame_id: "map"
-                    x: 2.0
-                    y: 1.0
-                    yaw: 0.0
-                    timeout_s: 120
-                - type: Wait
-                  name: 等待打符
-                  params:
-                    duration_s: 2.0 
-                - type: PublishString
-                  name: 发布打符完成
-                  params:
-                    topic: "/sentry_actions"
-                    data: "打符完成"
-                    qos_depth: 10            # 可选，默认10
-                    reliable: true           # 可选，默认true（false=BEST_EFFORT）
-                    transient_local: false   # 可选，默认false
-                    publish_every_tick: false # 可选，false=仅首次tick发布一次；true=每tick发布
-            - type: Selector
-              name: 巡逻组选择
-              params:
-                memory: false
-              children:
-                - type: Sequence
-                  name: A组巡逻
-                  params:
-                    memory: true
-                  children:
-                    - type: TopicStringEquals
-                      name: 选择A组?
-                      params:
-                        topic: "/patrol_group"
-                        expected: "A"
-                        latched_ok: false
-                    - type: NavigateToPoseAction
-                      name: A1
-                      params:
-                        server_name: "navigate_to_pose"
-                        frame_id: "map"
-                        x: 5.0
-                        y: 0.0
-                        yaw: 0.0
-                        timeout_s: 120
-                    - type: Wait
-                      name: 等待A
-                      params:
-                        duration_s: 2.0 
-                    - type: NavigateToPoseAction
-                      name: A2
-                      params:
-                        server_name: "navigate_to_pose"
-                        frame_id: "map"
-                        x: 9.0
-                        y: -4.0
-                        yaw: 0.0
-                        timeout_s: 120
-                    - type: Wait
-                      name: 等待A
-                      params:
-                        duration_s: 2.0 
-                - type: Sequence
-                  name: B组巡逻
-                  params:
-                    memory: true
-                  children:
-                    - type: TopicStringEquals
-                      name: 选择B组?
-                      params:
-                        topic: "/patrol_group"
-                        expected: "B"
-                        latched_ok: false
-                    - type: NavigateToPoseAction
-                      name: B1
-                      params:
-                        server_name: "navigate_to_pose"
-                        frame_id: "map"
-                        x: 1.5
-                        y: 4.5
-                        timeout_s: 120
-                    - type: Wait
-                      name: 等待B
-                      params:
-                        duration_s: 2.0 
-                    - type: NavigateToPoseAction
-                      name: B2
-                      params:
-                        server_name: "navigate_to_pose"
-                        frame_id: "map"
-                        x: -2.5
-                        y: 0.5
-                        timeout_s: 120
-                    - type: Wait
-                      name: 等待B
-                      params:
-                        duration_s: 2.0 
+              duration_s: 999999.0
 
+      # supply：回到补给点（如需修改，替换下方 x/y/yaw）
+      - type: Sequence
+        name: supply_回补给点
+        params:
+          memory: false
+        children:
+          - type: ParamBoolCondition
+            name: supply状态?
+            params:
+              param: "supply"
+              expected: true
+              latched_ok: false
+          - type: PublishString
+            name: 发布supply
+            params:
+              topic: "/sentry_actions"
+              data: "SUPPLY"
+              publish_every_tick: false
+          - type: NavigateToPoseAction
+            name: 去补给点
+            params:
+              server_name: "navigate_to_pose"
+              frame_id: "map"
+              x: -2.6
+              y: -1.3
+              yaw: 0.0
+              timeout_s: 120
+
+      # occupy_point：固定去占点位 [-6.3, -4.31, 0]
+      - type: Sequence
+        name: occupy_point_占点
+        params:
+          memory: false
+        children:
+          - type: ParamBoolCondition
+            name: occupy_point状态?
+            params:
+              param: "occupy_point"
+              expected: true
+              latched_ok: false
+          - type: PublishString
+            name: 发布occupy_point
+            params:
+              topic: "/sentry_actions"
+              data: "OCCUPY_POINT"
+              publish_every_tick: false
+          - type: NavigateToPoseAction
+            name: 去占点位
+            params:
+              server_name: "navigate_to_pose"
+              frame_id: "map"
+              x: -6.3
+              y: -4.3
+              yaw: 0.0
+              timeout_s: 120
+
+      # repel：按两个点顺序执行驱赶（点1 -> 短暂停留 -> 点2）
+      # 如需改为你的赛场点位，仅修改两个 NavigateToPoseAction 的 x/y/yaw
+      - type: Sequence
+        name: repel_双点驱赶
+        params:
+          memory: false
+        children:
+          - type: ParamBoolCondition
+            name: repel状态?
+            params:
+              param: "repel"
+              expected: true
+              latched_ok: false
+          - type: PublishString
+            name: 发布repel
+            params:
+              topic: "/sentry_actions"
+              data: "REPEL"
+              publish_every_tick: false
+          - type: NavigateToPoseAction
+            name: repel点1
+            params:
+              server_name: "navigate_to_pose"
+              frame_id: "map"
+              x: 4.2
+              y: -2.0
+              yaw: 0.0
+              timeout_s: 120
+          - type: Wait
+            name: repel点1停留
+            params:
+              duration_s: 1.0
+          - type: NavigateToPoseAction
+            name: repel点2
+            params:
+              server_name: "navigate_to_pose"
+              frame_id: "map"
+              x: -7.0
+              y: -5.0
+              yaw: 0.0
+              timeout_s: 120
+
+      # 兜底分支：没有任何状态命中时，短等待后下一帧继续评估
+      - type: Wait
+        name: 未匹配状态_空转
+        params:
+          duration_s: 0.2
