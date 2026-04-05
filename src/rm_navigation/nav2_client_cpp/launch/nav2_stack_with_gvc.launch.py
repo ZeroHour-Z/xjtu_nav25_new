@@ -41,6 +41,10 @@ def generate_launch_description():
         [FindPackageShare("nav2_client_cpp"), "config", "bt.xml"]
     )
 
+    default_nav_through_poses_bt_xml = PathJoinSubstitution(
+        [FindPackageShare("nav2_client_cpp"), "config", "bt_through_poses.xml"]
+    )
+
     default_rviz_config = PathJoinSubstitution(
         [FindPackageShare("nav2_client_cpp"), "rviz", "nav2_view.rviz"]
     )
@@ -132,6 +136,7 @@ def generate_launch_description():
                         "use_sim_time": use_sim_time,
                         "default_bt_xml_filename": default_bt_xml,
                         "default_nav_to_pose_bt_xml": default_nav_to_pose_bt_xml,
+                        "default_nav_through_poses_bt_xml": default_nav_through_poses_bt_xml,
                     },
                 ],
             ),

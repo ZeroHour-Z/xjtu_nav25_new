@@ -51,7 +51,7 @@ def generate_launch_description():
                     'target_twist_map_topic': target_twist_map_topic,
                     'global_costmap_topic': '/global_costmap/costmap',
                     'escape_target_cost_threshold': 0,
-                    'escape_enter_cost_threshold': 1,
+                    'escape_enter_cost_threshold': 99,
                     'escape_lethal_threshold': 100,
                     'escape_treat_unknown_as_lethal': False,
                     'escape_speed': 0.75,

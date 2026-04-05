@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+
+    <Sequence name="InitAndNavigate">
+      <SetBlackboard output_key="planner_id" value="GridBased"/>
+      <SetBlackboard output_key="controller_id" value="FollowPath"/>
+      <SetBlackboard output_key="goal_checker_id" value="general_goal_checker"/>
+
+      <RecoveryNode name="NavigateWithRecovery" number_of_retries="3">
+        <PipelineSequence name="PlanAndFollow">
+          <ComputePathThroughPoses goals="{goals}" path="{path}" planner_id="{planner_id}"/>
+          <FollowPath path="{path}" controller_id="{controller_id}" goal_checker_id="{goal_checker_id}"/>
+        </PipelineSequence>
+
+        <Sequence name="ClearAndWait">
+          <Wait wait_duration="1.5"/>
+        </Sequence>
+      </RecoveryNode>
+    </Sequence>
+  </BehaviorTree>
+</root>

@@ -34,7 +34,7 @@ tree:
             params:
               duration_s: 999999.0
 
-      # supply：回到补给点（如需修改，替换下方 x/y/yaw）
+      # supply：经途经点回补给点
       - type: Sequence
         name: supply_回补给点
         params:
@@ -52,15 +52,25 @@ tree:
               topic: "/sentry_actions"
               data: "SUPPLY"
               publish_every_tick: false
-          - type: NavigateToPoseAction
-            name: 去补给点
+          - type: Sequence
+            name: supply_导航序列
             params:
-              server_name: "navigate_to_pose"
-              frame_id: "map"
-              x: -1.7
-              y: -1.2
-              yaw: 0.0
-              timeout_s: 120
+              memory: true
+            children:
+              - type: NavigateThroughPosesAction
+                name: 经途经点去补给
+                params:
+                  server_name: "navigate_through_poses"
+                  frame_id: "map"
+                  poses:
+                    - {x: -0.8, y: -5.4, yaw: 0.0}
+                    - {x: -1.7, y: -1.2, yaw: 0.0}
+                  timeout_s: 120
+              - type: Wait
+                name: 补给点等待
+                params:
+                  duration_s: 999999.0
+      
       # # ============ 追击分支 ============
       # - type: Sequence
       #   name: 追击模式
@@ -160,8 +170,8 @@ tree:
             params:
               server_name: "navigate_to_pose"
               frame_id: "map"
-              x: 4.9
-              y: -4.7
+              x: 4.8
+              y: -4.4
               yaw: 0.0
               timeout_s: 120
 
@@ -189,8 +199,8 @@ tree:
             params:
               server_name: "navigate_to_pose"
               frame_id: "map"
-              x: 4.6
-              y: -6.0
+              x: 2.2
+              y: -5.3
               yaw: 0.0
               timeout_s: 120
           # - type: Wait

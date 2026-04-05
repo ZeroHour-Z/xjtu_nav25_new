@@ -43,3 +43,4 @@ global_velocity_controller:
     escape_speed: 0.8
     escape_goal_tolerance: 0.05
     escape_max_radius_cells: 200
+    escape_enter_delay_s: 1.0

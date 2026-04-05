@@ -86,6 +86,7 @@ public:
         declare_parameter<double>("escape_speed", 0.4);
         declare_parameter<double>("escape_goal_tolerance", 0.05);
         declare_parameter<int>("escape_max_radius_cells", 200);
+        declare_parameter<double>("escape_enter_delay_s", 2.0);
 
         // --- 获取参数 ---
         map_frame_ = get_parameter("map_frame").as_string();
@@ -123,6 +124,7 @@ public:
         escape_speed_ = get_parameter("escape_speed").as_double();
         escape_goal_tolerance_ = get_parameter("escape_goal_tolerance").as_double();
         escape_max_radius_cells_ = get_parameter("escape_max_radius_cells").as_int();
+        escape_enter_delay_s_ = get_parameter("escape_enter_delay_s").as_double();
 
         // 配置仿真器
         simulate_ = get_parameter("simulate").as_bool();
@@ -421,26 +423,53 @@ private:
         }
 
         if (!in_escape_mode_ && enter_blocked) {
-            int cgx = 0, cgy = 0;
-            if (worldToGrid(current_x, current_y, cgx, cgy)) {
-                int tgx = 0, tgy = 0;
-                if (findNearestFreeCell(cgx, cgy, tgx, tgy)) {
-                    double tx = 0.0, ty = 0.0;
-                    if (gridToWorld(tgx, tgy, tx, ty)) {
-                        escape_target_x_m_ = tx;
-                        escape_target_y_m_ = ty;
-                        in_escape_mode_ = true;
-                        RCLCPP_WARN_THROTTLE(
-                            get_logger(),
-                            *get_clock(),
-                            2000,
-                            "Entering ESCAPE mode. Target: (%.3f, %.3f) from cost %d",
-                            tx,
-                            ty,
-                            static_cast<int>(current_cost)
-                        );
+            if (!blocked_timing_active_) {
+                blocked_timing_active_ = true;
+                blocked_since_ = now;
+                RCLCPP_INFO(
+                    get_logger(),
+                    "Blocked detected (cost %d), waiting %.1fs before escape...",
+                    static_cast<int>(current_cost),
+                    escape_enter_delay_s_
+                );
+            }
+            const double blocked_duration = (now - blocked_since_).seconds();
+            if (blocked_duration >= escape_enter_delay_s_) {
+                int cgx = 0, cgy = 0;
+                if (worldToGrid(current_x, current_y, cgx, cgy)) {
+                    int tgx = 0, tgy = 0;
+                    if (findNearestFreeCell(cgx, cgy, tgx, tgy)) {
+                        double tx = 0.0, ty = 0.0;
+                        if (gridToWorld(tgx, tgy, tx, ty)) {
+                            escape_target_x_m_ = tx;
+                            escape_target_y_m_ = ty;
+                            in_escape_mode_ = true;
+                            blocked_timing_active_ = false;
+                            RCLCPP_WARN(
+                                get_logger(),
+                                "Entering ESCAPE mode after %.1fs blocked. Target: (%.3f, %.3f) from cost %d",
+                                blocked_duration,
+                                tx,
+                                ty,
+                                static_cast<int>(current_cost)
+                            );
+                        }
                     }
                 }
+            } else {
+                RCLCPP_INFO_THROTTLE(
+                    get_logger(),
+                    *get_clock(),
+                    500,
+                    "Blocked for %.1fs / %.1fs before escape triggers",
+                    blocked_duration,
+                    escape_enter_delay_s_
+                );
+            }
+        } else if (!in_escape_mode_ && !enter_blocked) {
+            if (blocked_timing_active_) {
+                RCLCPP_INFO(get_logger(), "Left blocked zone, resetting escape delay timer.");
+                blocked_timing_active_ = false;
             }
         }
 
@@ -893,6 +922,9 @@ private:
     double escape_speed_ { 0.4 };
     double escape_goal_tolerance_ { 0.05 };
     int escape_max_radius_cells_ { 200 };
+    double escape_enter_delay_s_ { 2.0 };
+    bool blocked_timing_active_ { false };
+    rclcpp::Time blocked_since_;
     double escape_target_x_m_ { 0.0 };
     double escape_target_y_m_ { 0.0 };
 };

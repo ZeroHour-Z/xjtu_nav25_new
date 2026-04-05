@@ -1,10 +1,11 @@
-from typing import Optional
+import math
+from typing import List, Optional
 
 import py_trees
 from py_trees.common import Status
 from rclpy.node import Node
 from rclpy.action import ActionClient
-from nav2_msgs.action import NavigateToPose
+from nav2_msgs.action import NavigateToPose, NavigateThroughPoses
 from geometry_msgs.msg import PoseStamped
 
 from ..registry import register
@@ -63,8 +64,6 @@ class NavigateToPoseAction(py_trees.behaviour.Behaviour):
 				pose.header.stamp = self.node.get_clock().now().to_msg()
 				pose.pose.position.x = float(self._x)
 				pose.pose.position.y = float(self._y)
-				# simple yaw to quaternion (z,w)
-				import math
 				pose.pose.orientation.z = math.sin(self._yaw * 0.5)
 				pose.pose.orientation.w = math.cos(self._yaw * 0.5)
 				goal_msg.pose = pose
@@ -121,4 +120,109 @@ class NavigateToPoseAction(py_trees.behaviour.Behaviour):
 			self._result_future = None
 			self.node.get_logger().warn(f"NavigateToPose goal rejected")
 		else:
-			self._result_future = self._goal_handle.get_result_async() 
+			self._result_future = self._goal_handle.get_result_async()
+
+
+@register("NavigateThroughPosesAction")
+class NavigateThroughPosesAction(py_trees.behaviour.Behaviour):
+	def __init__(
+		self,
+		name: str,
+		node: Node,
+		server_name: str = "navigate_through_poses",
+		frame_id: str = "map",
+		poses: Optional[List[dict]] = None,
+		timeout_s: Optional[float] = None,
+		cancel_on_terminate: bool = True,
+	):
+		super().__init__(name)
+		self.node = node
+		self.client = ActionClient(node, NavigateThroughPoses, server_name)
+		self._goal_handle = None
+		self._result_future = None
+		self._sent = False
+		self._succeeded = False
+		self.timeout_s = timeout_s
+		self.cancel_on_terminate = cancel_on_terminate
+		self._start_time = None
+		self._frame_id = frame_id
+		self._poses_raw = poses or []
+
+	def setup(self, **kwargs) -> None:
+		timeout_sec = float(kwargs.get('timeout', 3.0)) if 'timeout' in kwargs else 3.0
+		if not self.client.wait_for_server(timeout_sec=timeout_sec):
+			raise RuntimeError("Nav2 NavigateThroughPoses action server not available")
+
+	def initialise(self) -> None:
+		if self._succeeded:
+			return
+		self._sent = False
+		self._goal_handle = None
+		self._result_future = None
+		self._start_time = self.node.get_clock().now()
+
+	def _build_pose_stamped(self, p: dict) -> PoseStamped:
+		pose = PoseStamped()
+		pose.header.frame_id = self._frame_id
+		pose.header.stamp = self.node.get_clock().now().to_msg()
+		pose.pose.position.x = float(p.get("x", 0.0))
+		pose.pose.position.y = float(p.get("y", 0.0))
+		yaw = float(p.get("yaw", 0.0))
+		pose.pose.orientation.z = math.sin(yaw * 0.5)
+		pose.pose.orientation.w = math.cos(yaw * 0.5)
+		return pose
+
+	def update(self) -> Status:
+		if self._succeeded:
+			return Status.SUCCESS
+
+		if not self._sent:
+			goal_msg = NavigateThroughPoses.Goal()
+			goal_msg.poses = [self._build_pose_stamped(p) for p in self._poses_raw]
+			send_future = self.client.send_goal_async(goal_msg)
+			send_future.add_done_callback(self._on_goal_response)
+			self._sent = True
+			self.node.get_logger().info(
+				f"NavigateThroughPoses: sending {len(goal_msg.poses)} waypoints"
+			)
+			return Status.RUNNING
+
+		if self.timeout_s is not None:
+			elapsed = (self.node.get_clock().now() - self._start_time).nanoseconds / 1e9
+			if elapsed > self.timeout_s:
+				if self._goal_handle is not None:
+					try:
+						self._goal_handle.cancel_goal_async()
+					except Exception as exc:
+						self.node.get_logger().warn(f"Cancel goal failed: {exc}")
+				return Status.FAILURE
+
+		if self._result_future is not None and self._result_future.done():
+			result_stub = self._result_future.result()
+			status_code = getattr(result_stub, 'status', None)
+			if status_code is None and self._goal_handle is not None:
+				status_code = getattr(self._goal_handle, 'status', None)
+			if status_code == 4:  # STATUS_SUCCEEDED
+				self._succeeded = True
+				return Status.SUCCESS
+			else:
+				return Status.FAILURE
+
+		return Status.RUNNING
+
+	def terminate(self, new_status: Status) -> None:
+		if new_status == Status.INVALID:
+			self._succeeded = False
+			if self.cancel_on_terminate and self._goal_handle is not None:
+				try:
+					self._goal_handle.cancel_goal_async()
+				except Exception as exc:
+					self.node.get_logger().warn(f"Cancel goal failed on terminate: {exc}")
+
+	def _on_goal_response(self, future):
+		self._goal_handle = future.result()
+		if not getattr(self._goal_handle, 'accepted', False):
+			self._result_future = None
+			self.node.get_logger().warn("NavigateThroughPoses goal rejected")
+		else:
+			self._result_future = self._goal_handle.get_result_async()
